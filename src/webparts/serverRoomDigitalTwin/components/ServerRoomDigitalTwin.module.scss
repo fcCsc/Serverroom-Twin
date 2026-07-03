@@ -1,0 +1,43 @@
+.digitalTwin { background: radial-gradient(circle at top left, #17304a, #07111f 45%, #04070d); color: #eef6ff; min-height: 760px; padding: 24px; font-family: 'Segoe UI', sans-serif; }
+.header, .workspace, .tablePanel { border: 1px solid rgba(137, 196, 255, .2); background: rgba(8, 19, 34, .72); box-shadow: 0 24px 70px rgba(0,0,0,.28); backdrop-filter: blur(18px); border-radius: 24px; }
+.header { align-items: center; display: flex; gap: 24px; justify-content: space-between; padding: 24px; }
+.header h1 { font-size: 32px; margin: 4px 0; }
+.header p { color: #a9bdd4; margin: 0; }
+.kicker { color: #6bdcff; font-size: 12px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.headerControls { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+.headerControls input, .headerControls select, .headerControls button { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius: 14px; color: #fff; padding: 10px 12px; }
+.headerControls input::placeholder { color: #91a6bd; }
+.headerControls button { cursor: pointer; font-weight: 700; }
+.workspace { display: grid; gap: 18px; grid-template-columns: 250px 1fr 320px; margin-top: 18px; padding: 18px; }
+.sidebar, .rackView, .detailPanel { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 18px; }
+h2 { font-size: 18px; margin: 0 0 16px; }
+h3 { color: #b9cde4; font-size: 13px; margin: 18px 0 8px; text-transform: uppercase; }
+.rackNav { align-items: center; background: rgba(255,255,255,.055); border: 1px solid transparent; border-radius: 12px; color: #eef6ff; cursor: pointer; display: flex; justify-content: space-between; margin: 8px 0; padding: 10px; width: 100%; }
+.active, .rackNav:hover { border-color: rgba(107, 220, 255, .55); background: rgba(107, 220, 255, .12); }
+.sectionTitle, .rackTop { align-items: center; display: flex; justify-content: space-between; }
+.sectionTitle span { color: #6bdcff; font-size: 12px; font-weight: 700; }
+.rackGrid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.rackCard { background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)); border: 1px solid rgba(255,255,255,.14); border-radius: 18px; color: #eef6ff; cursor: pointer; min-height: 320px; padding: 14px; text-align: left; }
+.selectedRack { border-color: #6bdcff; box-shadow: 0 0 0 2px rgba(107,220,255,.18); }
+.units { background: rgba(0,0,0,.26); border-radius: 14px; display: flex; flex-direction: column-reverse; gap: 7px; margin-top: 14px; min-height: 250px; padding: 10px; }
+.deviceBlock { border-radius: 10px; color: #03111d; cursor: pointer; display: flex; flex-direction: column; font-size: 12px; font-weight: 800; justify-content: center; padding: 7px 9px; }
+.deviceBlock small { font-size: 10px; font-weight: 600; opacity: .75; }
+.statusHealthy { background: rgba(48, 209, 88, .18); color: #7cff9f; }
+.statusWarning { background: rgba(255, 204, 0, .18); color: #ffe071; }
+.statusCritical { background: rgba(255, 69, 58, .2); color: #ff8a82; }
+.statusOffline { background: rgba(142, 142, 147, .2); color: #c7c7cc; }
+.deviceBlock.statusHealthy { background: linear-gradient(135deg, #38f18c, #2dd4bf); color: #032116; }
+.deviceBlock.statusWarning { background: linear-gradient(135deg, #ffe071, #ff9f0a); color: #261800; }
+.deviceBlock.statusCritical { background: linear-gradient(135deg, #ff8a82, #ff453a); color: #280000; }
+.deviceBlock.statusOffline { background: linear-gradient(135deg, #c7c7cc, #636366); color: #111; }
+.details { display: grid; grid-template-columns: 110px 1fr; gap: 10px; }
+.details dt { color: #8fa8c2; }
+.details dd { margin: 0; }
+.settings { border-top: 1px solid rgba(255,255,255,.12); color: #b9cde4; margin-top: 18px; padding-top: 18px; }
+.tablePanel { margin-top: 18px; overflow: auto; padding: 18px; }
+table { border-collapse: collapse; width: 100%; }
+th, td { border-bottom: 1px solid rgba(255,255,255,.09); padding: 12px; text-align: left; }
+th { color: #9fb7d0; font-size: 12px; text-transform: uppercase; }
+tbody tr { cursor: pointer; }
+tbody tr:hover, .selectedRow { background: rgba(107, 220, 255, .09); }
+@media (max-width: 1100px) { .workspace { grid-template-columns: 1fr; } .header { align-items: flex-start; flex-direction: column; } }
