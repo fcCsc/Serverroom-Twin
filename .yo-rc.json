@@ -1,0 +1,13 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "version": "1.20.0",
+    "libraryName": "serverroom-digital-twin",
+    "libraryId": "7dfb4bc9-2749-4f0a-8d34-0eec498df26d",
+    "environment": "spo",
+    "packageManager": "npm",
+    "solutionName": "serverroom-digital-twin",
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "ServerRoomDigitalTwin"
+  }
+}
