@@ -12,6 +12,7 @@
 .sidebar, .rackView, .detailPanel { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 18px; }
 h2 { font-size: 18px; margin: 0 0 16px; }
 h3 { color: #b9cde4; font-size: 13px; margin: 18px 0 8px; text-transform: uppercase; }
+.locationGroup { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 2px; }
 .rackNav { align-items: center; background: rgba(255,255,255,.055); border: 1px solid transparent; border-radius: 12px; color: #eef6ff; cursor: pointer; display: flex; justify-content: space-between; margin: 8px 0; padding: 10px; width: 100%; }
 .active, .rackNav:hover { border-color: rgba(107, 220, 255, .55); background: rgba(107, 220, 255, .12); }
 .sectionTitle, .rackTop { align-items: center; display: flex; justify-content: space-between; }
