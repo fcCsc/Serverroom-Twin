@@ -1,0 +1,26 @@
+name: SPFx build
+
+on:
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    name: npm install and build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v5
+        with:
+          node-version: '18.18.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build SPFx bundle
+        run: npm run build

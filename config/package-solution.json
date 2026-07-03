@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "serverroom-digital-twin-client-side-solution",
+    "id": "7dfb4bc9-2749-4f0a-8d34-0eec498df26d",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true
+  },
+  "paths": { "zippedPackage": "solution/serverroom-digital-twin.sppkg" }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx/client-side-web-part-manifest.schema.json",
+  "id": "26a47d7d-c8c6-4b80-bdaf-6600c34b0a50",
+  "alias": "ServerRoomDigitalTwinWebPart",
+  "componentType": "WebPart",
+  "version": "1.0.0",
+  "manifestVersion": 2,
+  "requiresCustomScript": false,
+  "supportedHosts": ["SharePointWebPart", "TeamsPersonalApp", "TeamsTab"],
+  "supportsThemeVariants": true,
+  "preconfiguredEntries": [{
+    "groupId": "5c03119e-3074-46fd-976b-c60198311f70",
+    "group": { "default": "Advanced" },
+    "title": { "default": "ServerRoomDigitalTwin" },
+    "description": { "default": "Prototype server room digital twin dashboard using dummy data." },
+    "officeFabricIconFontName": "Server",
+    "properties": { "description": "Server room digital twin", "racksListName": "Racks", "devicesListName": "Devices", "useDummyData": true }
+  }]
+}
