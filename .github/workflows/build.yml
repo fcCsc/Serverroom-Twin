@@ -1,13 +1,14 @@
-name: SPFx build
+name: SPFx package
 
 on:
   pull_request:
     branches:
       - '**'
+  workflow_dispatch:
 
 jobs:
-  build:
-    name: npm install and build
+  package:
+    name: Build and package SPFx solution
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -24,3 +25,13 @@ jobs:
 
       - name: Build SPFx bundle
         run: npm run build
+
+      - name: Package SPFx solution
+        run: npm run package-solution
+
+      - name: Upload SharePoint package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sharepoint-sppkg
+          path: sharepoint/solution/*.sppkg
+          if-no-files-found: error
