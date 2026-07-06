@@ -8,32 +8,31 @@
 .headerControls input, .headerControls select, .headerControls button { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18); border-radius: 14px; color: #fff; padding: 10px 12px; }
 .headerControls input::placeholder { color: #91a6bd; }
 .headerControls button { cursor: pointer; font-weight: 700; }
-.workspace { display: grid; gap: 18px; grid-template-columns: 250px 1fr 320px; margin-top: 18px; padding: 18px; }
+.workspace { display: grid; gap: 18px; grid-template-columns: 250px 1fr 340px; margin-top: 18px; padding: 18px; }
 .sidebar, .rackView, .detailPanel { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1); border-radius: 20px; padding: 18px; }
 h2 { font-size: 18px; margin: 0 0 16px; }
 h3 { color: #b9cde4; font-size: 13px; margin: 18px 0 8px; text-transform: uppercase; }
-.locationGroup { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 2px; }
-.rackNav { align-items: center; background: rgba(255,255,255,.055); border: 1px solid transparent; border-radius: 12px; color: #eef6ff; cursor: pointer; display: flex; justify-content: space-between; margin: 8px 0; padding: 10px; width: 100%; }
-.active, .rackNav:hover { border-color: rgba(107, 220, 255, .55); background: rgba(107, 220, 255, .12); }
+.locationGroup { border-top: 1px solid rgba(255,255,255,.08); margin-top: 14px; padding-top: 12px; }
+.roomNav, .rackNav { align-items: center; background: rgba(255,255,255,.055); border: 1px solid transparent; border-radius: 12px; color: #eef6ff; cursor: pointer; display: flex; justify-content: space-between; margin: 8px 0; padding: 10px; width: 100%; }
+.roomNav { color: #6bdcff; font-weight: 800; text-align: left; }
+.active, .roomNav:hover, .rackNav:hover { border-color: rgba(107, 220, 255, .55); background: rgba(107, 220, 255, .12); }
 .sectionTitle, .rackTop { align-items: center; display: flex; justify-content: space-between; }
-.sectionTitle span { color: #6bdcff; font-size: 12px; font-weight: 700; }
-.rackGrid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
-.rackCard { background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)); border: 1px solid rgba(255,255,255,.14); border-radius: 18px; color: #eef6ff; cursor: pointer; min-height: 320px; padding: 14px; text-align: left; }
+.sectionTitle span, .rackTop span { color: #6bdcff; font-size: 12px; font-weight: 700; }
+.rackView { min-width: 0; }
+.threeHost { background: linear-gradient(180deg, rgba(7, 17, 31, .95), rgba(3, 8, 15, .96)); border: 1px solid rgba(107,220,255,.18); border-radius: 18px; height: 560px; overflow: hidden; width: 100%; }
+.threeHost canvas { display: block; height: 100%; width: 100%; }
+.sceneMessage { background: rgba(255, 204, 0, .12); border: 1px solid rgba(255, 204, 0, .28); border-radius: 12px; color: #ffe071; margin: 0 0 12px; padding: 10px 12px; }
+.fallbackGrid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.fallbackRack { background: linear-gradient(180deg, rgba(255,255,255,.09), rgba(255,255,255,.035)); border: 1px solid rgba(255,255,255,.14); border-radius: 18px; color: #eef6ff; cursor: pointer; min-height: 430px; padding: 14px; text-align: left; }
 .selectedRack { border-color: #6bdcff; box-shadow: 0 0 0 2px rgba(107,220,255,.18); }
-.units { background: rgba(0,0,0,.26); border-radius: 14px; display: flex; flex-direction: column-reverse; gap: 7px; margin-top: 14px; min-height: 250px; padding: 10px; }
-.deviceBlock { border-radius: 10px; color: #03111d; cursor: pointer; display: flex; flex-direction: column; font-size: 12px; font-weight: 800; justify-content: center; padding: 7px 9px; }
-.deviceBlock small { font-size: 10px; font-weight: 600; opacity: .75; }
-.statusHealthy { background: rgba(48, 209, 88, .18); color: #7cff9f; }
-.statusWarning { background: rgba(255, 204, 0, .18); color: #ffe071; }
-.statusCritical { background: rgba(255, 69, 58, .2); color: #ff8a82; }
-.statusOffline { background: rgba(142, 142, 147, .2); color: #c7c7cc; }
-.deviceBlock.statusHealthy { background: linear-gradient(135deg, #38f18c, #2dd4bf); color: #032116; }
-.deviceBlock.statusWarning { background: linear-gradient(135deg, #ffe071, #ff9f0a); color: #261800; }
-.deviceBlock.statusCritical { background: linear-gradient(135deg, #ff8a82, #ff453a); color: #280000; }
-.deviceBlock.statusOffline { background: linear-gradient(135deg, #c7c7cc, #636366); color: #111; }
+.fallbackUnits { background: rgba(0,0,0,.28); border-radius: 14px; height: 360px; margin-top: 14px; overflow: hidden; padding: 10px; position: relative; }
+.fallbackUnits:before { background: repeating-linear-gradient(to top, rgba(255,255,255,.09) 0, rgba(255,255,255,.09) 1px, transparent 1px, transparent 8.57px); content: ''; inset: 10px; opacity: .42; position: absolute; }
+.fallbackDevice { background: linear-gradient(135deg, #59b6ff, #2dd4bf); border: 1px solid rgba(255,255,255,.55); border-radius: 8px; color: #03111d; cursor: pointer; display: flex; flex-direction: column; font-size: 11px; font-weight: 800; justify-content: center; overflow: hidden; padding: 4px 6px; position: absolute; z-index: 1; }
+.fallbackDevice small { font-size: 9px; font-weight: 700; opacity: .75; }
+.selectedDevice { filter: brightness(1.2); outline: 2px solid #fff; transform: translateY(-1px); }
 .details { display: grid; grid-template-columns: 110px 1fr; gap: 10px; }
 .details dt { color: #8fa8c2; }
-.details dd { margin: 0; }
+.details dd { margin: 0; overflow-wrap: anywhere; }
 .settings { border-top: 1px solid rgba(255,255,255,.12); color: #b9cde4; margin-top: 18px; padding-top: 18px; }
 .tablePanel { margin-top: 18px; overflow: auto; padding: 18px; }
 table { border-collapse: collapse; width: 100%; }
@@ -41,4 +40,4 @@ th, td { border-bottom: 1px solid rgba(255,255,255,.09); padding: 12px; text-ali
 th { color: #9fb7d0; font-size: 12px; text-transform: uppercase; }
 tbody tr { cursor: pointer; }
 tbody tr:hover, .selectedRow { background: rgba(107, 220, 255, .09); }
-@media (max-width: 1100px) { .workspace { grid-template-columns: 1fr; } .header { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 1100px) { .workspace { grid-template-columns: 1fr; } .header { align-items: flex-start; flex-direction: column; } .threeHost { height: 460px; } }
