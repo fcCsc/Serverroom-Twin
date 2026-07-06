@@ -1,4 +1,5 @@
 import { IColumnMappingSettings, IDevice, IRack } from '../models/ServerRoomModels';
+// Safe dummy data only; production inventory will come from SharePoint Lists.
 
 export const mockColumnMappings: IColumnMappingSettings = {
   racksListName: 'Racks',

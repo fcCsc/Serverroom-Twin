@@ -1,3 +1,4 @@
+// SharePoint-ready MVP model for the 2D / 2.5D rack dashboard.
 export type DeviceType = 'Server' | 'Switch' | 'Storage' | 'Firewall' | 'PatchPanel' | 'UPS' | 'Appliance';
 export type MountWidth = 'Full' | 'Half' | 'Third' | 'Quarter';
 export type RackSide = 'Front' | 'Rear';

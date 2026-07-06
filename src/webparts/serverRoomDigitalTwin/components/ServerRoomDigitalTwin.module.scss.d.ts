@@ -1,3 +1,4 @@
+// Final MVP style contract for the 2D / 2.5D rack dashboard.
 declare const styles: {
   digitalTwin: string; header: string; kicker: string; headerControls: string; segmented: string; segmentActive: string; workspace: string; sidebar: string; rackView: string; detailPanel: string; locationGroup: string; floorNav: string; rackNav: string; active: string; sectionTitle: string; rackCanvas: string; rackShell: string; selectedRack: string; rackHeader: string; rackBody: string; uLabel: string; deviceBlock: string; selectedDevice: string; conflict: string; details: string; miniList: string; settings: string; tablePanel: string; selectedRow: string; typeSwitch: string; typeServer: string; typeFirewall: string; typeStorage: string; typeUPS: string; typePatchPanel: string; typeAppliance: string; [className: string]: string;
 };

@@ -1,4 +1,5 @@
 import * as React from 'react';
+// Final MVP: default experience is the 2D / 2.5D rack visual dashboard.
 import styles from './ServerRoomDigitalTwin.module.scss';
 import { mockColumnMappings, mockDevices, mockRacks } from '../data/mockData';
 import { DeviceType, IDevice, IRack, MountWidth, RackSide } from '../models/ServerRoomModels';

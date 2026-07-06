@@ -1,3 +1,4 @@
+/* Final MVP styles: 2D / 2.5D rack dashboard, no default GLB view. */
 .digitalTwin { background: radial-gradient(circle at 10% 0%, #203b5e, #07111f 42%, #03060b); color: #eef6ff; min-height: 760px; padding: 24px; font-family: 'Segoe UI', sans-serif; }
 .header, .workspace, .tablePanel { border: 1px solid rgba(160,205,255,.22); background: rgba(8,19,34,.74); box-shadow: 0 24px 70px rgba(0,0,0,.32); backdrop-filter: blur(18px); border-radius: 26px; }
 .header { display: flex; gap: 22px; justify-content: space-between; padding: 24px; }

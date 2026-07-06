@@ -1,4 +1,5 @@
 name: Deploy static preview to GitHub Pages
+# Final MVP preview workflow: builds the 2D rack dashboard and uploads both Pages and downloadable artifacts.
 
 on:
   workflow_dispatch:
