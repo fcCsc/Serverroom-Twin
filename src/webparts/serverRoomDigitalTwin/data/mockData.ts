@@ -1,50 +1,29 @@
-import { IDevice, IDeviceTypeAssetMapping, IModelAsset, IRack, IRoom } from '../models/ServerRoomModels';
+import { IColumnMappingSettings, IDevice, IRack } from '../models/ServerRoomModels';
 
-export const defaultAssetLibraryPath: string = 'Site Assets/ServerRoom3DAssets';
-
-export const mockRooms: IRoom[] = [
-  {
-    RoomKey: 'demo-room-a',
-    Title: 'Demo Server Room A',
-    Description: 'Safe dummy room used for visual guidance and rack placement previews.',
-    SortOrder: 1
-  }
-];
+export const mockColumnMappings: IColumnMappingSettings = {
+  racksListName: 'Racks',
+  devicesListName: 'Devices',
+  rackColumns: { rackKey: 'Rack-ID', floor: 'floor', location: 'Location', rackHeightU: 'height unit', responsible: 'Responsible', occupancy: 'Occupancy' },
+  deviceColumns: { deviceKey: 'Device ID', rackKey: 'Rack-ID', uPosition: 'U-Position', deviceType: 'Device Type', ipAddress: 'IP Address', vlan: 'VLAN', powerConsumptionW: 'Power Consumption (W)', serialNumber: 'Serial Number', warrantyExpiry: 'Warranty Expiry', maintenanceResponsible: 'Maintenance Responsible' }
+};
 
 export const mockRacks: IRack[] = [
-  { RackKey: 'rack-a01', RoomKey: 'demo-room-a', Title: 'Rack A01', RowLabel: 'A', RackNumber: '01', RackHeightU: 42, XPosition: -3.2, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Primary demo rack with mixed full-width and half-width devices.' },
-  { RackKey: 'rack-a02', RoomKey: 'demo-room-a', Title: 'Rack A02', RowLabel: 'A', RackNumber: '02', RackHeightU: 42, XPosition: 0, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Demo rack showing rear-mounted and power equipment examples.' },
-  { RackKey: 'rack-a03', RoomKey: 'demo-room-a', Title: 'Rack A03', RowLabel: 'A', RackNumber: '03', RackHeightU: 42, XPosition: 3.2, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Demo rack reserved for storage and documentation examples.' }
+  { RackKey: 'RACK-A-01', Location: 'Demo Lab North', Floor: 'Floor 1', RackHeightU: 42, Responsible: 'Infrastructure Team', Occupancy: '62%', Notes: 'Primary demo application rack.' },
+  { RackKey: 'RACK-A-02', Location: 'Demo Lab North', Floor: 'Floor 1', RackHeightU: 42, Responsible: 'Network Team', Occupancy: '48%', Notes: 'Network and perimeter demo devices.' },
+  { RackKey: 'RACK-B-01', Location: 'Demo Lab North', Floor: 'Floor 2', RackHeightU: 42, Responsible: 'Platform Team', Occupancy: '57%' },
+  { RackKey: 'RACK-C-01', Location: 'Training Suite West', Floor: 'Floor 3', RackHeightU: 42, Responsible: 'Training Team', Occupancy: '38%' },
+  { RackKey: 'RACK-C-02', Location: 'Training Suite West', Floor: 'Floor 3', RackHeightU: 42, Responsible: 'Operations Team', Occupancy: '44%' }
 ];
 
 export const mockDevices: IDevice[] = [
-  { DeviceKey: 'dev-sw-001', RackKey: 'rack-a01', Title: 'SW-DEMO-LEFT', DeviceType: 'Switch', UPosition: 41, UHeight: 1, MountWidth: 'Half', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'switch', Owner: 'Network Team', Environment: 'Demo', Notes: 'Half-width dummy switch mounted at U41, left slot.' },
-  { DeviceKey: 'dev-sw-002', RackKey: 'rack-a01', Title: 'SW-DEMO-RIGHT', DeviceType: 'Switch', UPosition: 41, UHeight: 1, MountWidth: 'Half', HorizontalSlot: 2, RackSide: 'Front', ModelAssetKey: 'switch', Owner: 'Network Team', Environment: 'Demo', Notes: 'Half-width dummy switch mounted at U41, right slot.' },
-  { DeviceKey: 'dev-app-001', RackKey: 'rack-a01', Title: 'APP-DEMO-001', DeviceType: 'Server', UPosition: 36, UHeight: 2, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'server', Owner: 'Platform Team', Environment: 'Demo', Notes: 'Full-width 2U dummy application server.' },
-  { DeviceKey: 'dev-sto-001', RackKey: 'rack-a01', Title: 'STO-DEMO-001', DeviceType: 'Storage', UPosition: 28, UHeight: 4, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'storage', Owner: 'Infrastructure Team', Environment: 'Demo', Notes: 'Full-width 4U dummy storage shelf.' },
-  { DeviceKey: 'dev-fw-001', RackKey: 'rack-a02', Title: 'FW-DEMO-001', DeviceType: 'Firewall', UPosition: 39, UHeight: 1, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'firewall', Owner: 'Network Team', Environment: 'Shared', Notes: 'Dummy firewall appliance for placement guidance only.' },
-  { DeviceKey: 'dev-ups-001', RackKey: 'rack-a02', Title: 'UPS-DEMO-001', DeviceType: 'UPS', UPosition: 1, UHeight: 4, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Rear', ModelAssetKey: 'ups', Owner: 'Operations Team', Environment: 'Facilities', Notes: 'Rear-side dummy UPS example.' },
-  { DeviceKey: 'dev-patch-001', RackKey: 'rack-a03', Title: 'PATCH-DEMO-001', DeviceType: 'PatchPanel', UPosition: 42, UHeight: 1, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'patchpanel', Owner: 'Network Team', Environment: 'Shared', Notes: 'Dummy patch panel for documentation examples.' },
-  { DeviceKey: 'dev-app-002', RackKey: 'rack-a03', Title: 'APP-DEMO-002', DeviceType: 'Server', UPosition: 34, UHeight: 2, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'server', Owner: 'Platform Team', Environment: 'Training', Notes: 'Additional full-width 2U dummy server.' }
-];
-
-export const mockModelAssets: IModelAsset[] = [
-  { ModelAssetKey: 'rack', Title: 'Rack cabinet', FileName: 'rack.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/rack.glb`, DefaultForDeviceType: 'Rack', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'switch', Title: 'Network switch', FileName: 'switch.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/switch.glb`, DefaultForDeviceType: 'Switch', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'server', Title: 'Server', FileName: 'server.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/server.glb`, DefaultForDeviceType: 'Server', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'firewall', Title: 'Firewall', FileName: 'firewall.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/firewall.glb`, DefaultForDeviceType: 'Firewall', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'storage', Title: 'Storage array', FileName: 'storage.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/storage.glb`, DefaultForDeviceType: 'Storage', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'ups', Title: 'UPS', FileName: 'ups.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/ups.glb`, DefaultForDeviceType: 'UPS', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'patchpanel', Title: 'Patch panel', FileName: 'patchpanel.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/patchpanel.glb`, DefaultForDeviceType: 'PatchPanel', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 }
-];
-
-
-export const mockDeviceTypeAssetMappings: IDeviceTypeAssetMapping[] = [
-  { DeviceType: 'Rack', ModelAssetKey: 'rack' },
-  { DeviceType: 'Switch', ModelAssetKey: 'switch', DefaultMountWidth: 'Half', DefaultUHeight: 1 },
-  { DeviceType: 'Server', ModelAssetKey: 'server', DefaultMountWidth: 'Full', DefaultUHeight: 2 },
-  { DeviceType: 'Firewall', ModelAssetKey: 'firewall', DefaultMountWidth: 'Full', DefaultUHeight: 1 },
-  { DeviceType: 'Storage', ModelAssetKey: 'storage', DefaultMountWidth: 'Full', DefaultUHeight: 4 },
-  { DeviceType: 'UPS', ModelAssetKey: 'ups', DefaultMountWidth: 'Full', DefaultUHeight: 4 },
-  { DeviceType: 'PatchPanel', ModelAssetKey: 'patchpanel', DefaultMountWidth: 'Full', DefaultUHeight: 1 }
+  { DeviceKey: 'SW-DEMO-01A', DeviceName: 'Access Switch Left', RackKey: 'RACK-A-01', UPosition: 41, UHeight: 1, DeviceType: 'Switch', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-110', PowerConsumptionW: 120, SerialNumber: 'SN-DEMO-SW01A', WarrantyExpiry: '2028-06-30', MaintenanceResponsible: 'Network Team', Manufacturer: 'Contoso Network', Model: 'CN-SW-24H', AssetTag: 'ASSET-DEMO-1001', RackSide: 'Front', MountWidth: 'Half', HorizontalSlot: 1, Notes: 'Half-width switch sharing U41.' },
+  { DeviceKey: 'SW-DEMO-01B', DeviceName: 'Access Switch Right', RackKey: 'RACK-A-01', UPosition: 41, UHeight: 1, DeviceType: 'Switch', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-120', PowerConsumptionW: 118, SerialNumber: 'SN-DEMO-SW01B', WarrantyExpiry: '2028-06-30', MaintenanceResponsible: 'Network Team', Manufacturer: 'Contoso Network', Model: 'CN-SW-24H', AssetTag: 'ASSET-DEMO-1002', RackSide: 'Front', MountWidth: 'Half', HorizontalSlot: 2, Notes: 'Second half-width switch sharing U41.' },
+  { DeviceKey: 'SRV-DEMO-APP01', DeviceName: 'Application Server 01', RackKey: 'RACK-A-01', UPosition: 36, UHeight: 2, DeviceType: 'Server', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-210', PowerConsumptionW: 420, SerialNumber: 'SN-DEMO-SRV01', WarrantyExpiry: '2029-01-31', MaintenanceResponsible: 'Platform Team', Manufacturer: 'Fabrikam Systems', Model: 'FS-2U-Compute', AssetTag: 'ASSET-DEMO-2001', RackSide: 'Front', MountWidth: 'Full', HorizontalSlot: 1 },
+  { DeviceKey: 'STO-DEMO-01', DeviceName: 'Storage Shelf 01', RackKey: 'RACK-A-01', UPosition: 28, UHeight: 4, DeviceType: 'Storage', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-310', PowerConsumptionW: 680, SerialNumber: 'SN-DEMO-STO01', WarrantyExpiry: '2029-09-15', MaintenanceResponsible: 'Infrastructure Team', Manufacturer: 'Northwind Storage', Model: 'NS-4U-Array', AssetTag: 'ASSET-DEMO-3001', RackSide: 'Front', MountWidth: 'Full', HorizontalSlot: 1 },
+  { DeviceKey: 'UPS-DEMO-01', DeviceName: 'Rack UPS 01', RackKey: 'RACK-A-01', UPosition: 1, UHeight: 4, DeviceType: 'UPS', IPAddress: 'Documentation only', VLAN: 'Facilities', PowerConsumptionW: 0, SerialNumber: 'SN-DEMO-UPS01', WarrantyExpiry: '2027-12-31', MaintenanceResponsible: 'Operations Team', Manufacturer: 'Tailspin Power', Model: 'TP-UPS-4U', AssetTag: 'ASSET-DEMO-4001', RackSide: 'Rear', MountWidth: 'Full', HorizontalSlot: 1 },
+  { DeviceKey: 'FW-DEMO-01', DeviceName: 'Perimeter Firewall', RackKey: 'RACK-A-02', UPosition: 39, UHeight: 1, DeviceType: 'Firewall', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-EDGE', PowerConsumptionW: 95, SerialNumber: 'SN-DEMO-FW01', WarrantyExpiry: '2028-11-20', MaintenanceResponsible: 'Security Team', Manufacturer: 'Adventure Security', Model: 'AS-FW-1U', AssetTag: 'ASSET-DEMO-5001', RackSide: 'Front', MountWidth: 'Full', HorizontalSlot: 1 },
+  { DeviceKey: 'PATCH-DEMO-01', DeviceName: 'Patch Panel 01', RackKey: 'RACK-A-02', UPosition: 42, UHeight: 1, DeviceType: 'PatchPanel', VLAN: 'Structured cabling', PowerConsumptionW: 0, SerialNumber: 'SN-DEMO-PATCH01', WarrantyExpiry: '2030-05-01', MaintenanceResponsible: 'Network Team', Manufacturer: 'Wide World Importers', Model: 'WWI-PP-48', AssetTag: 'ASSET-DEMO-6001', RackSide: 'Front', MountWidth: 'Full', HorizontalSlot: 1 },
+  { DeviceKey: 'SRV-DEMO-APP02', DeviceName: 'Application Server 02', RackKey: 'RACK-B-01', UPosition: 34, UHeight: 2, DeviceType: 'Server', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-220', PowerConsumptionW: 390, SerialNumber: 'SN-DEMO-SRV02', WarrantyExpiry: '2029-03-31', MaintenanceResponsible: 'Platform Team', Manufacturer: 'Fabrikam Systems', Model: 'FS-2U-Compute', AssetTag: 'ASSET-DEMO-2002', RackSide: 'Front', MountWidth: 'Full', HorizontalSlot: 1 },
+  { DeviceKey: 'SW-DEMO-02', DeviceName: 'Training Switch', RackKey: 'RACK-C-01', UPosition: 40, UHeight: 1, DeviceType: 'Switch', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-TRAIN', PowerConsumptionW: 90, SerialNumber: 'SN-DEMO-SW02', WarrantyExpiry: '2028-08-15', MaintenanceResponsible: 'Training Team', Manufacturer: 'Contoso Network', Model: 'CN-SW-48', AssetTag: 'ASSET-DEMO-1003', RackSide: 'Front', MountWidth: 'Full', HorizontalSlot: 1 },
+  { DeviceKey: 'UPS-DEMO-02', DeviceName: 'Training UPS', RackKey: 'RACK-C-02', UPosition: 1, UHeight: 4, DeviceType: 'UPS', IPAddress: 'Documentation only', VLAN: 'Facilities', PowerConsumptionW: 0, SerialNumber: 'SN-DEMO-UPS02', WarrantyExpiry: '2027-10-01', MaintenanceResponsible: 'Operations Team', Manufacturer: 'Tailspin Power', Model: 'TP-UPS-4U', AssetTag: 'ASSET-DEMO-4002', RackSide: 'Rear', MountWidth: 'Full', HorizontalSlot: 1 }
 ];

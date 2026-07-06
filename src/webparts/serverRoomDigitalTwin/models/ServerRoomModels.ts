@@ -1,80 +1,60 @@
-export type DeviceType = 'Server' | 'Switch' | 'Storage' | 'Firewall' | 'PatchPanel' | 'UPS';
+export type DeviceType = 'Server' | 'Switch' | 'Storage' | 'Firewall' | 'PatchPanel' | 'UPS' | 'Appliance';
 export type MountWidth = 'Full' | 'Half' | 'Third' | 'Quarter';
 export type RackSide = 'Front' | 'Rear';
 
-export interface IRoom {
-  RoomKey: string;
-  Title: string;
-  Description: string;
-  SortOrder: number;
-}
-
 export interface IRack {
   RackKey: string;
-  RoomKey: string;
-  Title: string;
-  RowLabel: string;
-  RackNumber: string;
+  Floor: string;
+  Location: string;
   RackHeightU: number;
-  XPosition: number;
-  ZPosition: number;
-  Rotation: number;
-  ModelAssetKey: string;
-  Notes: string;
+  Responsible: string;
+  Occupancy: string;
+  Notes?: string;
 }
 
 export interface IDevice {
   DeviceKey: string;
+  DeviceName: string;
   RackKey: string;
-  Title: string;
-  DeviceType: DeviceType;
   UPosition: number;
-  UHeight: number;
-  MountWidth: MountWidth;
-  HorizontalSlot: number;
-  RackSide: RackSide;
-  ModelAssetKey: string;
-  Owner: string;
-  Notes: string;
-  Environment?: string;
+  UHeight?: number;
+  DeviceType: DeviceType;
   IPAddress?: string;
   VLAN?: string;
-  PowerConsumption?: string;
+  PowerConsumptionW?: number;
   SerialNumber?: string;
   WarrantyExpiry?: string;
+  MaintenanceResponsible: string;
+  Manufacturer?: string;
+  Model?: string;
+  AssetTag?: string;
+  RackSide?: RackSide;
+  MountWidth?: MountWidth;
+  HorizontalSlot?: number;
+  Notes?: string;
 }
 
-export interface IModelAsset {
-  ModelAssetKey: string;
-  Title: string;
-  FileName: string;
-  LibraryRelativePath: string;
-  DefaultForDeviceType?: DeviceType | 'Rack';
-  ScaleX: number;
-  ScaleY: number;
-  ScaleZ: number;
-  RotationOffset: number;
-}
-
-export interface IDeviceTypeAssetMapping {
-  DeviceType: DeviceType | 'Rack';
-  ModelAssetKey: string;
-  DefaultMountWidth?: MountWidth;
-  DefaultUHeight?: number;
-}
-
-export interface IListMappingSettings {
-  roomsListName: string;
+export interface IColumnMappingSettings {
   racksListName: string;
   devicesListName: string;
-  modelAssetsListName: string;
-  assetLibraryPath: string;
-  rackKeyColumn: string;
-  deviceRackColumn: string;
-  uPositionColumn: string;
-  uHeightColumn: string;
-  mountWidthColumn: string;
-  horizontalSlotColumn: string;
-  rackSideColumn: string;
-  modelAssetKeyColumn: string;
+  rackColumns: {
+    rackKey: 'Rack-ID';
+    floor: 'floor';
+    location: 'Location';
+    rackHeightU: 'height unit';
+    responsible: 'Responsible';
+    occupancy: 'Occupancy';
+  };
+  deviceColumns: {
+    deviceKey: 'Device ID';
+    rackKey: 'Rack-ID';
+    uPosition: 'U-Position';
+    deviceType: 'Device Type';
+    ipAddress: 'IP Address';
+    vlan: 'VLAN';
+    powerConsumptionW: 'Power Consumption (W)';
+    serialNumber: 'Serial Number';
+    warrantyExpiry: 'Warranty Expiry';
+    maintenanceResponsible: 'Maintenance Responsible';
+  };
 }
