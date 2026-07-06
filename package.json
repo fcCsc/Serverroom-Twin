@@ -9,7 +9,8 @@
     "build": "gulp bundle --ship",
     "clean": "gulp clean",
     "test": "echo \"No tests configured for Phase 1 prototype\"",
-    "package-solution": "gulp package-solution --ship"
+    "package-solution": "gulp package-solution --ship",
+    "preview:build": "vite build --config preview/vite.config.ts"
   },
   "dependencies": {
     "@microsoft/sp-core-library": "1.20.0",
@@ -30,6 +31,8 @@
     "@types/webpack-env": "1.15.3",
     "gulp": "4.0.2",
     "typescript": "4.7.4",
-    "@types/node": "18.19.86"
+    "@types/node": "18.19.86",
+    "vite": "^5.4.11",
+    "sass": "^1.80.6"
   }
 }
