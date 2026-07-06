@@ -1,4 +1,4 @@
-/* Final MVP styles: 2D / 2.5D rack dashboard, no default GLB view. */
+/* Final MVP styles: 2D / 2.5D rack dashboard. */
 .digitalTwin { background: radial-gradient(circle at 10% 0%, #203b5e, #07111f 42%, #03060b); color: #eef6ff; min-height: 760px; padding: 24px; font-family: 'Segoe UI', sans-serif; }
 .header, .workspace, .tablePanel { border: 1px solid rgba(160,205,255,.22); background: rgba(8,19,34,.74); box-shadow: 0 24px 70px rgba(0,0,0,.32); backdrop-filter: blur(18px); border-radius: 26px; }
 .header { display: flex; gap: 22px; justify-content: space-between; padding: 24px; }
@@ -55,3 +55,13 @@ th { color: #9fb7d0; font-size: 12px; text-transform: uppercase; }
 tbody tr { cursor: pointer; }
 tbody tr:hover, .selectedRow { background: rgba(107,220,255,.09); }
 @media (max-width: 1180px) { .workspace { grid-template-columns: 1fr; } .header { flex-direction: column; } }
+.sceneControls { display: flex; gap: 8px; justify-content: flex-end; margin: -6px 0 12px; }
+.sceneControls button { background: rgba(107,220,255,.12); border: 1px solid rgba(107,220,255,.32); border-radius: 10px; color: #dff7ff; cursor: pointer; font-weight: 800; padding: 7px 11px; }
+.blockScene { background: radial-gradient(circle at 50% 20%, rgba(64,140,190,.16), rgba(3,10,18,.96)); border: 1px solid rgba(107,220,255,.18); border-radius: 18px; height: 560px; overflow: hidden; perspective: 1100px; position: relative; }
+.blockScene:before { background-image: linear-gradient(rgba(107,220,255,.18) 1px, transparent 1px), linear-gradient(90deg, rgba(107,220,255,.18) 1px, transparent 1px); background-size: 70px 70px; content: ''; inset: 44% -20% -30% -20%; opacity: .45; position: absolute; transform: rotateX(64deg) rotateZ(-28deg); transform-origin: center top; }
+.blockFloor { height: 420px; left: 80px; position: absolute; top: 95px; transform-style: preserve-3d; transition: transform .24s ease; width: 900px; }
+.legoRack { background: linear-gradient(180deg, rgba(120,210,255,.2), rgba(20,36,54,.86)); border: 2px solid rgba(130,220,255,.55); border-radius: 10px; bottom: 0; box-shadow: 12px 18px 30px rgba(0,0,0,.34); height: 360px; position: absolute; transform: translateZ(18px); transform-style: preserve-3d; width: 164px; }
+.legoRack:before, .legoRack:after { background: rgba(180,230,255,.28); content: ''; height: 100%; position: absolute; top: 0; width: 8px; }
+.legoRack:before { left: 10px; } .legoRack:after { right: 10px; }
+.legoRack strong { background: rgba(3,12,22,.72); border-radius: 999px; color: #eaf7ff; left: 18px; padding: 4px 9px; position: absolute; top: -30px; }
+.legoDevice { border: 1px solid rgba(255,255,255,.5); border-radius: 8px; box-shadow: 8px 10px 16px rgba(0,0,0,.3); color: #04111d; cursor: pointer; font-size: 10px; font-weight: 900; overflow: hidden; position: absolute; text-align: left; transform: translateZ(32px); }
