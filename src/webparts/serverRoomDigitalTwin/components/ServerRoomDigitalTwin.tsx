@@ -15,8 +15,6 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
   const devices: IDevice[] = mockDevices;
   const modelAssets: IModelAsset[] = mockModelAssets;
   const resolvedAssetLibraryPath = assetLibraryPath || defaultAssetLibraryPath;
-  const isDummyMode = useDummyData ?? true;
-  const shouldEnableGlbLoading = Boolean(enableGlbLoading) && !isDummyMode;
 
   const [selectedRoomKey, setSelectedRoomKey] = React.useState<string>(rooms[0].RoomKey);
   const [selectedRackKey, setSelectedRackKey] = React.useState<string>(racks[0].RackKey);
@@ -110,20 +108,20 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
         <main className={styles.rackView}>
           <div className={styles.sectionTitle}>
             <h2>{show2DFallback ? '2D rack fallback' : '3D server room guidance'}</h2>
-            <span>{isDummyMode ? 'Dummy data mode' : 'SharePoint Lists mode'}</span>
+            <span>{(useDummyData ?? true) ? 'Dummy data mode' : 'SharePoint Lists mode'}</span>
           </div>
           {sceneMessage && <p className={styles.sceneMessage}>{sceneMessage}</p>}
           {show2DFallback ? (
             <Rack2DFallbackView racks={roomRacks} devices={filteredDevices} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackClick} onDeviceSelected={onDeviceClick} />
           ) : (
-            <ServerRoom3DView racks={roomRacks} devices={filteredDevices} modelAssets={modelAssets} assetLibraryPath={resolvedAssetLibraryPath} currentSiteUrl={currentSiteUrl} enableGlbLoading={shouldEnableGlbLoading} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackClick} onDeviceSelected={onDeviceClick} onSceneUnavailable={onSceneUnavailable} />
+            <ServerRoom3DView racks={roomRacks} devices={filteredDevices} modelAssets={modelAssets} assetLibraryPath={resolvedAssetLibraryPath} currentSiteUrl={currentSiteUrl} enableGlbLoading={Boolean(enableGlbLoading) && !(useDummyData ?? true)} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackClick} onDeviceSelected={onDeviceClick} onSceneUnavailable={onSceneUnavailable} />
           )}
         </main>
 
         <aside className={styles.detailPanel}>
           <h2>{selectedDevice ? 'Device details' : 'Rack details'}</h2>
           {selectedDevice ? <Details rows={{ Device: selectedDevice.Title, Type: selectedDevice.DeviceType, Rack: selectedRack ? selectedRack.Title : selectedDevice.RackKey, Side: selectedDevice.RackSide, Position: `U${selectedDevice.UPosition} / ${selectedDevice.UHeight}U`, Width: `${selectedDevice.MountWidth}, slot ${selectedDevice.HorizontalSlot}`, Owner: selectedDevice.Owner, Environment: selectedDevice.Environment || 'Not specified', Asset: `${selectedDevice.ModelAssetKey}.glb`, Notes: selectedDevice.Notes }} /> : selectedRack && <Details rows={{ Rack: selectedRack.Title, Room: rooms.filter((room) => room.RoomKey === selectedRack.RoomKey)[0].Title, Row: selectedRack.RowLabel, Number: selectedRack.RackNumber, Height: `${selectedRack.RackHeightU}U`, Position: `X ${selectedRack.XPosition}, Z ${selectedRack.ZPosition}`, Rotation: `${selectedRack.Rotation}°`, Asset: `${selectedRack.ModelAssetKey}.glb`, Devices: `${devices.filter((device) => device.RackKey === selectedRack.RackKey).length}`, Notes: selectedRack.Notes }} />}
-          {settingsOpen && <div className={styles.settings}><h3>Future SharePoint mapping</h3><p>Racks list: {racksListName || 'Racks'}</p><p>Devices list: {devicesListName || 'Devices'}</p><p>Model assets list: {modelAssetsListName || 'Model Assets'}</p><p>Device type asset mappings list: {deviceTypeAssetMappingsListName || 'DeviceTypeAssetMappings'}</p><p>Asset library path: {resolvedAssetLibraryPath}</p><p>Use dummy data: {isDummyMode ? 'Yes' : 'No'}</p><p>GLB loading: {shouldEnableGlbLoading ? 'Enabled for SharePoint runtime' : 'Disabled for dummy preview / primitive fallback'}</p><p>Column mapping controls will map RackKey, DeviceKey, UPosition, UHeight, MountWidth, HorizontalSlot, RackSide and ModelAssetKey in a later integration phase.</p></div>}
+          {settingsOpen && <div className={styles.settings}><h3>Future SharePoint mapping</h3><p>Racks list: {racksListName || 'Racks'}</p><p>Devices list: {devicesListName || 'Devices'}</p><p>Model assets list: {modelAssetsListName || 'Model Assets'}</p><p>Device type asset mappings list: {deviceTypeAssetMappingsListName || 'DeviceTypeAssetMappings'}</p><p>Asset library path: {resolvedAssetLibraryPath}</p><p>Use dummy data: {(useDummyData ?? true) ? 'Yes' : 'No'}</p><p>GLB loading: {Boolean(enableGlbLoading) && !(useDummyData ?? true) ? 'Enabled for SharePoint runtime' : 'Disabled for dummy preview / primitive fallback'}</p><p>Column mapping controls will map RackKey, DeviceKey, UPosition, UHeight, MountWidth, HorizontalSlot, RackSide and ModelAssetKey in a later integration phase.</p></div>}
         </aside>
       </div>
 
