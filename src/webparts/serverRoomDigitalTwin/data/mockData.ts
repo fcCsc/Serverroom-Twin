@@ -1,19 +1,50 @@
-import { IDevice, IRack } from '../models/ServerRoomModels';
+import { IDevice, IDeviceTypeAssetMapping, IModelAsset, IRack, IRoom } from '../models/ServerRoomModels';
+
+export const defaultAssetLibraryPath: string = 'Site Assets/ServerRoom3DAssets';
+
+export const mockRooms: IRoom[] = [
+  {
+    RoomKey: 'demo-room-a',
+    Title: 'Demo Server Room A',
+    Description: 'Safe dummy room used for visual guidance and rack placement previews.',
+    SortOrder: 1
+  }
+];
 
 export const mockRacks: IRack[] = [
-  { id: 'rack-a01', name: 'Rack A01', location: 'Demo Lab A', row: 'A', rackNumber: '01', totalUnits: 42, status: 'Healthy' },
-  { id: 'rack-a02', name: 'Rack A02', location: 'Demo Lab A', row: 'A', rackNumber: '02', totalUnits: 42, status: 'Warning' },
-  { id: 'rack-b01', name: 'Rack B01', location: 'Training Suite', row: 'B', rackNumber: '01', totalUnits: 42, status: 'Critical' },
-  { id: 'rack-b02', name: 'Rack B02', location: 'Training Suite', row: 'B', rackNumber: '02', totalUnits: 42, status: 'Offline' }
+  { RackKey: 'rack-a01', RoomKey: 'demo-room-a', Title: 'Rack A01', RowLabel: 'A', RackNumber: '01', RackHeightU: 42, XPosition: -3.2, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Primary demo rack with mixed full-width and half-width devices.' },
+  { RackKey: 'rack-a02', RoomKey: 'demo-room-a', Title: 'Rack A02', RowLabel: 'A', RackNumber: '02', RackHeightU: 42, XPosition: 0, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Demo rack showing rear-mounted and power equipment examples.' },
+  { RackKey: 'rack-a03', RoomKey: 'demo-room-a', Title: 'Rack A03', RowLabel: 'A', RackNumber: '03', RackHeightU: 42, XPosition: 3.2, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Demo rack reserved for storage and documentation examples.' }
 ];
 
 export const mockDevices: IDevice[] = [
-  { id: 'dev-app-001', name: 'APP-DEMO-001', rackId: 'rack-a01', unitStart: 38, unitHeight: 2, type: 'Server', status: 'Healthy', environment: 'Demo', owner: 'Platform Team', notes: 'Sample application host' },
-  { id: 'dev-sto-001', name: 'STO-DEMO-001', rackId: 'rack-a01', unitStart: 30, unitHeight: 4, type: 'Storage', status: 'Healthy', environment: 'Demo', owner: 'Infrastructure Team', notes: 'Sample storage array' },
-  { id: 'dev-sw-001', name: 'SW-DEMO-001', rackId: 'rack-a01', unitStart: 41, unitHeight: 1, type: 'Switch', status: 'Healthy', environment: 'Shared', owner: 'Network Team', notes: 'Demo top-of-rack switch' },
-  { id: 'dev-fw-001', name: 'FW-DEMO-001', rackId: 'rack-a02', unitStart: 39, unitHeight: 1, type: 'Firewall', status: 'Warning', environment: 'Shared', owner: 'Network Team', notes: 'Demo security appliance' },
-  { id: 'dev-ups-001', name: 'UPS-DEMO-001', rackId: 'rack-a02', unitStart: 1, unitHeight: 4, type: 'UPS', status: 'Healthy', environment: 'Facilities', owner: 'Operations Team', notes: 'Dummy backup power unit' },
-  { id: 'dev-app-002', name: 'APP-DEMO-002', rackId: 'rack-b01', unitStart: 35, unitHeight: 2, type: 'Server', status: 'Critical', environment: 'Sandbox', owner: 'Platform Team', notes: 'Demo critical state' },
-  { id: 'dev-patch-001', name: 'PATCH-DEMO-001', rackId: 'rack-b01', unitStart: 42, unitHeight: 1, type: 'Patch Panel', status: 'Healthy', environment: 'Shared', owner: 'Network Team', notes: 'Demo patch panel' },
-  { id: 'dev-app-003', name: 'APP-DEMO-003', rackId: 'rack-b02', unitStart: 36, unitHeight: 2, type: 'Server', status: 'Offline', environment: 'Training', owner: 'Training Team', notes: 'Dummy offline workload' }
+  { DeviceKey: 'dev-sw-001', RackKey: 'rack-a01', Title: 'SW-DEMO-LEFT', DeviceType: 'Switch', UPosition: 41, UHeight: 1, MountWidth: 'Half', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'switch', Owner: 'Network Team', Environment: 'Demo', Notes: 'Half-width dummy switch mounted at U41, left slot.' },
+  { DeviceKey: 'dev-sw-002', RackKey: 'rack-a01', Title: 'SW-DEMO-RIGHT', DeviceType: 'Switch', UPosition: 41, UHeight: 1, MountWidth: 'Half', HorizontalSlot: 2, RackSide: 'Front', ModelAssetKey: 'switch', Owner: 'Network Team', Environment: 'Demo', Notes: 'Half-width dummy switch mounted at U41, right slot.' },
+  { DeviceKey: 'dev-app-001', RackKey: 'rack-a01', Title: 'APP-DEMO-001', DeviceType: 'Server', UPosition: 36, UHeight: 2, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'server', Owner: 'Platform Team', Environment: 'Demo', Notes: 'Full-width 2U dummy application server.' },
+  { DeviceKey: 'dev-sto-001', RackKey: 'rack-a01', Title: 'STO-DEMO-001', DeviceType: 'Storage', UPosition: 28, UHeight: 4, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'storage', Owner: 'Infrastructure Team', Environment: 'Demo', Notes: 'Full-width 4U dummy storage shelf.' },
+  { DeviceKey: 'dev-fw-001', RackKey: 'rack-a02', Title: 'FW-DEMO-001', DeviceType: 'Firewall', UPosition: 39, UHeight: 1, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'firewall', Owner: 'Network Team', Environment: 'Shared', Notes: 'Dummy firewall appliance for placement guidance only.' },
+  { DeviceKey: 'dev-ups-001', RackKey: 'rack-a02', Title: 'UPS-DEMO-001', DeviceType: 'UPS', UPosition: 1, UHeight: 4, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Rear', ModelAssetKey: 'ups', Owner: 'Operations Team', Environment: 'Facilities', Notes: 'Rear-side dummy UPS example.' },
+  { DeviceKey: 'dev-patch-001', RackKey: 'rack-a03', Title: 'PATCH-DEMO-001', DeviceType: 'PatchPanel', UPosition: 42, UHeight: 1, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'patchpanel', Owner: 'Network Team', Environment: 'Shared', Notes: 'Dummy patch panel for documentation examples.' },
+  { DeviceKey: 'dev-app-002', RackKey: 'rack-a03', Title: 'APP-DEMO-002', DeviceType: 'Server', UPosition: 34, UHeight: 2, MountWidth: 'Full', HorizontalSlot: 1, RackSide: 'Front', ModelAssetKey: 'server', Owner: 'Platform Team', Environment: 'Training', Notes: 'Additional full-width 2U dummy server.' }
+];
+
+export const mockModelAssets: IModelAsset[] = [
+  { ModelAssetKey: 'rack', Title: 'Rack cabinet', FileName: 'rack.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/rack.glb`, DefaultForDeviceType: 'Rack', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'switch', Title: 'Network switch', FileName: 'switch.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/switch.glb`, DefaultForDeviceType: 'Switch', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'server', Title: 'Server', FileName: 'server.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/server.glb`, DefaultForDeviceType: 'Server', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'firewall', Title: 'Firewall', FileName: 'firewall.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/firewall.glb`, DefaultForDeviceType: 'Firewall', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'storage', Title: 'Storage array', FileName: 'storage.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/storage.glb`, DefaultForDeviceType: 'Storage', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'ups', Title: 'UPS', FileName: 'ups.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/ups.glb`, DefaultForDeviceType: 'UPS', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'patchpanel', Title: 'Patch panel', FileName: 'patchpanel.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/patchpanel.glb`, DefaultForDeviceType: 'PatchPanel', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 }
+];
+
+
+export const mockDeviceTypeAssetMappings: IDeviceTypeAssetMapping[] = [
+  { DeviceType: 'Rack', ModelAssetKey: 'rack' },
+  { DeviceType: 'Switch', ModelAssetKey: 'switch', DefaultMountWidth: 'Half', DefaultUHeight: 1 },
+  { DeviceType: 'Server', ModelAssetKey: 'server', DefaultMountWidth: 'Full', DefaultUHeight: 2 },
+  { DeviceType: 'Firewall', ModelAssetKey: 'firewall', DefaultMountWidth: 'Full', DefaultUHeight: 1 },
+  { DeviceType: 'Storage', ModelAssetKey: 'storage', DefaultMountWidth: 'Full', DefaultUHeight: 4 },
+  { DeviceType: 'UPS', ModelAssetKey: 'ups', DefaultMountWidth: 'Full', DefaultUHeight: 4 },
+  { DeviceType: 'PatchPanel', ModelAssetKey: 'patchpanel', DefaultMountWidth: 'Full', DefaultUHeight: 1 }
 ];
