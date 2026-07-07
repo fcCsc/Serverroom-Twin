@@ -9,11 +9,11 @@ export const mockColumnMappings: IColumnMappingSettings = {
 };
 
 export const mockRacks: IRack[] = [
-  { RackKey: 'RACK-A-01', Location: 'Demo Lab North', Floor: 'Floor 1', RackHeightU: 42, Responsible: 'Infrastructure Team', Occupancy: '62%', Notes: 'Primary demo application rack.' },
-  { RackKey: 'RACK-A-02', Location: 'Demo Lab North', Floor: 'Floor 1', RackHeightU: 42, Responsible: 'Network Team', Occupancy: '48%', Notes: 'Network and perimeter demo devices.' },
-  { RackKey: 'RACK-B-01', Location: 'Demo Lab North', Floor: 'Floor 2', RackHeightU: 42, Responsible: 'Platform Team', Occupancy: '57%' },
-  { RackKey: 'RACK-C-01', Location: 'Training Suite West', Floor: 'Floor 3', RackHeightU: 42, Responsible: 'Training Team', Occupancy: '38%' },
-  { RackKey: 'RACK-C-02', Location: 'Training Suite West', Floor: 'Floor 3', RackHeightU: 42, Responsible: 'Operations Team', Occupancy: '44%' }
+  { RackKey: 'RACK-A-01', Location: 'HH Herrengraben', Room: 'Server Room 4. OG', Floor: '4. OG', RackHeightU: 42, Responsible: 'Infrastructure Team', Occupancy: '62%', Notes: 'Primary demo application rack.' },
+  { RackKey: 'RACK-A-02', Location: 'HH Herrengraben', Room: 'Server Room 4. OG', Floor: '4. OG', RackHeightU: 42, Responsible: 'Network Team', Occupancy: '48%', Notes: 'Network and perimeter demo devices.' },
+  { RackKey: 'RACK-B-01', Location: 'HH Herrengraben', Room: 'Server Room 2. OG', Floor: '2. OG', RackHeightU: 42, Responsible: 'Platform Team', Occupancy: '57%' },
+  { RackKey: 'RACK-C-01', Location: 'HH Hafencity', Room: 'Network Room 1. OG', Floor: '1. OG', RackHeightU: 42, Responsible: 'Training Team', Occupancy: '38%' },
+  { RackKey: 'RACK-C-02', Location: 'HH Hafencity', Room: 'Network Room 1. OG', Floor: '1. OG', RackHeightU: 42, Responsible: 'Operations Team', Occupancy: '44%' }
 ];
 
 export const mockDevices: IDevice[] = [

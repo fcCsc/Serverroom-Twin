@@ -19,15 +19,16 @@ const getUsedU = (rack: IRack): number => mockDevices.filter((device) => device.
 const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksListName, devicesListName, useDummyData }) => {
   const firstRack = mockRacks[0];
   const [selectedLocation, setSelectedLocation] = React.useState<string>(firstRack.Location);
-  const [selectedFloor, setSelectedFloor] = React.useState<string>(firstRack.Floor);
+  const [selectedRoom, setSelectedRoom] = React.useState<string | undefined>();
   const [selectedRackKey, setSelectedRackKey] = React.useState<string>(firstRack.RackKey);
   const [selectedDeviceKey, setSelectedDeviceKey] = React.useState<string | undefined>();
+  const [selectionScope, setSelectionScope] = React.useState<'location' | 'room' | 'rack' | 'device'>('location');
   const [search, setSearch] = React.useState<string>('');
   const [rackFilter, setRackFilter] = React.useState<string>('All');
   const [deviceTypeFilter, setDeviceTypeFilter] = React.useState<DeviceType | 'All'>('All');
   const [rackSide, setRackSide] = React.useState<RackSide>('Front');
   const [settingsOpen, setSettingsOpen] = React.useState<boolean>(false);
-  const [viewMode, setViewMode] = React.useState<'elevation' | 'blocks'>('elevation');
+  const [viewMode, setViewMode] = React.useState<'elevation' | 'blocks'>('blocks');
   const [sceneOffset, setSceneOffset] = React.useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [visibleColumns, setVisibleColumns] = React.useState<string[]>(inventoryColumns);
   const [localUseDummyData, setLocalUseDummyData] = React.useState<boolean>(useDummyData !== false);
@@ -35,28 +36,43 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
   const selectedRack = mockRacks.filter((rack) => rack.RackKey === selectedRackKey)[0];
   const selectedDevice = selectedDeviceKey ? mockDevices.filter((device) => device.DeviceKey === selectedDeviceKey)[0] : undefined;
   const locations = Array.from(new Set(mockRacks.map((rack) => rack.Location)));
-  const floors = Array.from(new Set(mockRacks.filter((rack) => rack.Location === selectedLocation).map((rack) => rack.Floor)));
-  const areaRacks = mockRacks.filter((rack) => rack.Location === selectedLocation && rack.Floor === selectedFloor && (rackFilter === 'All' || rack.RackKey === rackFilter));
+  const rooms = Array.from(new Set(mockRacks.filter((rack) => rack.Location === selectedLocation).map((rack) => rack.Room)));
+  const scopedRacks = mockRacks.filter((rack) => rack.Location === selectedLocation && (!selectedRoom || rack.Room === selectedRoom) && (selectionScope === 'location' || selectionScope === 'room' || rack.RackKey === selectedRackKey));
+  const rackOptions = scopedRacks;
+  const areaRacks = scopedRacks.filter((rack) => rackFilter === 'All' || rack.RackKey === rackFilter);
+  const areaRackKeys = areaRacks.map((rack) => rack.RackKey);
 
   const filteredDevices = mockDevices.filter((device) => {
     const rack = getRack(device);
-    const text = `${device.DeviceKey} ${device.DeviceName} ${device.DeviceType} ${device.IPAddress || ''} ${device.VLAN || ''} ${device.SerialNumber || ''} ${device.Manufacturer || ''} ${device.Model || ''} ${rack ? `${rack.RackKey} ${rack.Location} ${rack.Floor}` : ''}`.toLowerCase();
-    return text.indexOf(search.toLowerCase()) > -1 && (deviceTypeFilter === 'All' || device.DeviceType === deviceTypeFilter) && (!rack || (rack.Location === selectedLocation && rack.Floor === selectedFloor));
+    const text = `${device.DeviceKey} ${device.DeviceName} ${device.DeviceType} ${device.IPAddress || ''} ${device.VLAN || ''} ${device.SerialNumber || ''} ${device.Manufacturer || ''} ${device.Model || ''} ${rack ? `${rack.RackKey} ${rack.Location} ${rack.Room} ${rack.Floor}` : ''}`.toLowerCase();
+    return text.indexOf(search.toLowerCase()) > -1 && (deviceTypeFilter === 'All' || device.DeviceType === deviceTypeFilter) && areaRackKeys.indexOf(device.RackKey) > -1;
   });
 
-  const selectArea = (location: string, floor: string): void => {
-    const rack = mockRacks.filter((candidate) => candidate.Location === location && candidate.Floor === floor)[0];
+  const selectLocation = (location: string): void => {
+    const rack = mockRacks.filter((candidate) => candidate.Location === location)[0];
     setSelectedLocation(location);
-    setSelectedFloor(floor);
+    setSelectedRoom(undefined);
     setRackFilter('All');
+    setSelectionScope('location');
+    if (rack) setSelectedRackKey(rack.RackKey);
+    setSelectedDeviceKey(undefined);
+  };
+
+  const selectRoom = (location: string, room: string): void => {
+    const rack = mockRacks.filter((candidate) => candidate.Location === location && candidate.Room === room)[0];
+    setSelectedLocation(location);
+    setSelectedRoom(room);
+    setRackFilter('All');
+    setSelectionScope('room');
     if (rack) setSelectedRackKey(rack.RackKey);
     setSelectedDeviceKey(undefined);
   };
 
   const selectRack = (rack: IRack): void => {
     setSelectedLocation(rack.Location);
-    setSelectedFloor(rack.Floor);
+    setSelectedRoom(rack.Room);
     setSelectedRackKey(rack.RackKey);
+    setSelectionScope('rack');
     setSelectedDeviceKey(undefined);
   };
 
@@ -64,9 +80,10 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
     const rack = getRack(device);
     if (rack) {
       setSelectedLocation(rack.Location);
-      setSelectedFloor(rack.Floor);
+      setSelectedRoom(rack.Room);
       setSelectedRackKey(rack.RackKey);
     }
+    setSelectionScope('device');
     setSelectedDeviceKey(device.DeviceKey);
     setRackSide(getSide(device));
   };
@@ -90,9 +107,9 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
         <div><span className={styles.kicker}>2D / 2.5D MVP</span><h1>Server Room Digital Twin</h1><p>SharePoint-ready rack visual guidance with safe dummy inventory data.</p></div>
         <div className={styles.headerControls}>
           <input aria-label="Search devices racks IP serial manufacturer model" placeholder="Search devices, racks, IP, serial, manufacturer, model..." value={search} onChange={(event) => setSearch(event.currentTarget.value)} />
-          <select aria-label="Location filter" value={selectedLocation} onChange={(event) => selectArea(event.currentTarget.value, mockRacks.filter((rack) => rack.Location === event.currentTarget.value)[0].Floor)}>{locations.map((location) => <option key={location}>{location}</option>)}</select>
-          <select aria-label="Floor filter" value={selectedFloor} onChange={(event) => selectArea(selectedLocation, event.currentTarget.value)}>{floors.map((floor) => <option key={floor}>{floor}</option>)}</select>
-          <select aria-label="Rack filter" value={rackFilter} onChange={(event) => setRackFilter(event.currentTarget.value)}><option>All</option>{mockRacks.filter((rack) => rack.Location === selectedLocation && rack.Floor === selectedFloor).map((rack) => <option key={rack.RackKey}>{rack.RackKey}</option>)}</select>
+          <select aria-label="Location filter" value={selectedLocation} onChange={(event) => selectLocation(event.currentTarget.value)}>{locations.map((location) => <option key={location}>{location}</option>)}</select>
+          <select aria-label="Room filter" value={selectedRoom || 'All rooms'} onChange={(event) => event.currentTarget.value === 'All rooms' ? selectLocation(selectedLocation) : selectRoom(selectedLocation, event.currentTarget.value)}><option>All rooms</option>{rooms.map((room) => <option key={room}>{room}</option>)}</select>
+          <select aria-label="Rack filter" value={rackFilter} onChange={(event) => setRackFilter(event.currentTarget.value)}><option>All</option>{rackOptions.map((rack) => <option key={rack.RackKey}>{rack.RackKey}</option>)}</select>
           <select aria-label="Device Type filter" value={deviceTypeFilter} onChange={(event) => setDeviceTypeFilter(event.currentTarget.value as DeviceType | 'All')}>{deviceTypes.map((type) => <option key={type}>{type}</option>)}</select>
           <div className={styles.segmented}><button className={rackSide === 'Front' ? styles.segmentActive : ''} onClick={() => setRackSide('Front')}>Front</button><button className={rackSide === 'Rear' ? styles.segmentActive : ''} onClick={() => setRackSide('Rear')}>Rear</button></div>
           <div className={styles.segmented}><button className={viewMode === 'elevation' ? styles.segmentActive : ''} onClick={() => setViewMode('elevation')}>Rack</button><button className={viewMode === 'blocks' ? styles.segmentActive : ''} onClick={() => setViewMode('blocks')}>2.5D</button></div>
@@ -101,9 +118,9 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
       </header>
 
       <div className={styles.workspace}>
-        <aside className={styles.sidebar}><h2>Räumlichkeiten</h2>{locations.map((location) => <div key={location} className={styles.locationGroup}><h3>{location}</h3>{Array.from(new Set(mockRacks.filter((rack) => rack.Location === location).map((rack) => rack.Floor))).map((floor) => { const rackCount = mockRacks.filter((rack) => rack.Location === location && rack.Floor === floor).length; return <button key={floor} className={`${styles.floorNav} ${selectedLocation === location && selectedFloor === floor ? styles.active : ''}`} onClick={() => selectArea(location, floor)}><span>{floor}</span><small>{rackCount} racks</small></button>; })}</div>)}</aside>
+        <aside className={styles.sidebar}><h2>Räumlichkeiten</h2>{locations.map((location) => <details key={location} className={styles.locationGroup} open={selectedLocation === location}><summary onClick={(event) => { event.preventDefault(); selectLocation(location); }}>{location}</summary>{Array.from(new Set(mockRacks.filter((rack) => rack.Location === location).map((rack) => rack.Room))).map((room) => { const roomRacks = mockRacks.filter((rack) => rack.Location === location && rack.Room === room); return <details key={room} open={selectedLocation === location && selectedRoom === room}><summary className={styles.floorNav} onClick={(event) => { event.preventDefault(); selectRoom(location, room); }}><span>{room}</span><small>{roomRacks.length} racks</small></summary>{roomRacks.map((rack) => <details key={rack.RackKey} open={selectedRackKey === rack.RackKey}><summary className={styles.rackNav} onClick={(event) => { event.preventDefault(); selectRack(rack); }}><span>{rack.RackKey}</span><small>{mockDevices.filter((device) => device.RackKey === rack.RackKey).length} devices</small></summary>{mockDevices.filter((device) => device.RackKey === rack.RackKey).map((device) => <button key={device.DeviceKey} className={`${styles.deviceNav} ${selectedDeviceKey === device.DeviceKey ? styles.active : ''}`} onClick={() => selectDevice(device)}>{device.DeviceName}</button>)}</details>)}</details>; })}</details>)}</aside>
 
-        <main className={styles.rackView}><div className={styles.sectionTitle}><h2>{selectedLocation} · {selectedFloor}</h2><span>{rackSide} side · {areaRacks.length} rack(s)</span></div>{viewMode === 'blocks' && <div className={styles.sceneControls}><button onClick={() => setSceneOffset({ x: sceneOffset.x - 24, y: sceneOffset.y })}>←</button><button onClick={() => setSceneOffset({ x: sceneOffset.x + 24, y: sceneOffset.y })}>→</button><button onClick={() => setSceneOffset({ x: sceneOffset.x, y: sceneOffset.y - 18 })}>↑</button><button onClick={() => setSceneOffset({ x: sceneOffset.x, y: sceneOffset.y + 18 })}>↓</button><button onClick={() => setSceneOffset({ x: 0, y: 0 })}>Reset</button></div>}{viewMode === 'elevation' ? <div className={styles.rackCanvas}>{areaRacks.map((rack) => <RackElevation key={rack.RackKey} rack={rack} devices={filteredDevices.filter((device) => device.RackKey === rack.RackKey && getSide(device) === rackSide)} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} hasConflict={hasConflict} onRackSelected={selectRack} onDeviceSelected={selectDevice} />)}</div> : <BlockScene racks={areaRacks} devices={filteredDevices.filter((device) => getSide(device) === rackSide)} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} offset={sceneOffset} onRackSelected={selectRack} onDeviceSelected={selectDevice} />}</main>
+        <main className={styles.rackView}><div className={styles.sectionTitle}><h2>{selectedLocation}{selectedRoom ? ` · ${selectedRoom}` : ' · all rooms'}</h2><span>{rackSide} side · {areaRacks.length} rack(s)</span></div>{viewMode === 'blocks' && <div className={styles.sceneControls}><button onClick={() => setSceneOffset({ x: sceneOffset.x - 24, y: sceneOffset.y })}>←</button><button onClick={() => setSceneOffset({ x: sceneOffset.x + 24, y: sceneOffset.y })}>→</button><button onClick={() => setSceneOffset({ x: sceneOffset.x, y: sceneOffset.y - 18 })}>↑</button><button onClick={() => setSceneOffset({ x: sceneOffset.x, y: sceneOffset.y + 18 })}>↓</button><button onClick={() => setSceneOffset({ x: 0, y: 0 })}>Reset</button></div>}{viewMode === 'elevation' ? <div className={styles.rackCanvas}>{areaRacks.map((rack) => <RackElevation key={rack.RackKey} rack={rack} devices={filteredDevices.filter((device) => device.RackKey === rack.RackKey && getSide(device) === rackSide)} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} hasConflict={hasConflict} onRackSelected={selectRack} onDeviceSelected={selectDevice} />)}</div> : <BlockScene racks={areaRacks} devices={filteredDevices.filter((device) => getSide(device) === rackSide)} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} offset={sceneOffset} onRackSelected={selectRack} onDeviceSelected={selectDevice} />}</main>
 
         <aside className={styles.detailPanel}><h2>{selectedDevice ? 'Device details' : 'Rack details'}</h2>{selectedDevice ? <DeviceDetails device={selectedDevice} rack={getRack(selectedDevice)} /> : selectedRack && <RackDetails rack={selectedRack} />}
           <details open><summary>Devices in selected rack</summary><div className={styles.miniList}>{mockDevices.filter((device) => device.RackKey === selectedRackKey).map((device) => <button key={device.DeviceKey} onClick={() => selectDevice(device)}>{device.DeviceKey}<small>U{device.UPosition} · {device.DeviceType}</small></button>)}</div></details>
@@ -123,12 +140,12 @@ const RackElevation: React.FC<{ rack: IRack; devices: IDevice[]; selectedRackKey
 
 
 const BlockScene: React.FC<{ racks: IRack[]; devices: IDevice[]; selectedRackKey?: string; selectedDeviceKey?: string; offset: { x: number; y: number }; onRackSelected: (rack: IRack) => void; onDeviceSelected: (device: IDevice) => void; }> = ({ racks, devices, selectedRackKey, selectedDeviceKey, offset, onRackSelected, onDeviceSelected }) => (
-  <div className={styles.blockScene}><div className={styles.blockFloor} style={{ transform: `translate(${offset.x}px, ${offset.y}px) rotateX(58deg) rotateZ(-28deg)` }}>{racks.map((rack, rackIndex) => <div key={rack.RackKey} className={`${styles.legoRack} ${selectedRackKey === rack.RackKey ? styles.selectedRack : ''}`} style={{ left: `${rackIndex * 210}px` }} onClick={() => onRackSelected(rack)}><strong>{rack.RackKey}</strong>{devices.filter((device) => device.RackKey === rack.RackKey).map((device) => <button key={device.DeviceKey} className={`${styles.legoDevice} ${styles[`type${device.DeviceType}`]} ${selectedDeviceKey === device.DeviceKey ? styles.selectedDevice : ''}`} style={{ bottom: `${device.UPosition * 5}px`, height: `${Math.max(getUHeight(device) * 12, 14)}px`, width: `${getWidth(device) === 'Full' ? 128 : 62}px`, left: `${getWidth(device) === 'Full' ? 16 : 16 + (getSlot(device) - 1) * 66}px` }} onClick={(event) => { event.stopPropagation(); onDeviceSelected(device); }}>{device.DeviceName}</button>)}</div>)}</div></div>
+  <div className={styles.blockScene}><div className={styles.blockFloor} style={{ transform: `translate(${offset.x}px, ${offset.y}px) rotateX(58deg) rotateZ(-28deg)` }}>{racks.map((rack, rackIndex) => <div key={rack.RackKey} className={`${styles.legoRack} ${selectedRackKey === rack.RackKey ? styles.selectedRack : ''}`} style={{ left: `${rackIndex * 210}px` }} onClick={() => onRackSelected(rack)}><strong>{rack.RackKey}</strong>{devices.filter((device) => device.RackKey === rack.RackKey).map((device) => { const width = getWidth(device); const isSelected = selectedDeviceKey === device.DeviceKey; return <button key={device.DeviceKey} className={`${styles.legoDevice} ${styles[`type${device.DeviceType}`]} ${isSelected ? styles.selectedDevice : ''}`} style={{ bottom: `${(device.UPosition - 1) * 6}px`, height: `${Math.max(getUHeight(device) * 16, 24)}px`, width: `${width === 'Full' ? 132 : 64}px`, left: `${width === 'Full' ? 16 : 16 + (getSlot(device) - 1) * 68}px` }} onClick={(event) => { event.stopPropagation(); onDeviceSelected(device); }}><span className={styles.legoDeviceName}>{device.DeviceKey}</span><span className={styles.legoDeviceModel}>{device.Manufacturer} {device.Model}</span><small>U{device.UPosition}/{getUHeight(device)}U · {width} · Slot {getSlot(device)}</small></button>; })}</div>)}</div></div>
 );
 
-const RackDetails: React.FC<{ rack: IRack }> = ({ rack }) => <Details rows={{ 'Rack-ID': rack.RackKey, Location: rack.Location, Floor: rack.Floor, RackHeightU: `${rack.RackHeightU}`, Responsible: rack.Responsible, Occupancy: rack.Occupancy, Devices: `${mockDevices.filter((device) => device.RackKey === rack.RackKey).length}`, 'Used U': `${getUsedU(rack).toFixed(1)}`, 'Free U': `${(rack.RackHeightU - getUsedU(rack)).toFixed(1)}`, Notes: rack.Notes || 'No notes in dummy data' }} />;
-const DeviceDetails: React.FC<{ device: IDevice; rack?: IRack }> = ({ device, rack }) => <Details rows={{ 'Device ID / DeviceName': `${device.DeviceKey} / ${device.DeviceName}`, 'Device Type': device.DeviceType, Manufacturer: device.Manufacturer || '', Model: device.Model || '', 'Serial Number': device.SerialNumber || '', AssetTag: device.AssetTag || '', 'Rack-ID': device.RackKey, UPosition: `${device.UPosition}`, UHeight: `${getUHeight(device)}`, RackSide: getSide(device), MountWidth: getWidth(device), HorizontalSlot: `${getSlot(device)}`, 'IP Address': device.IPAddress || '', VLAN: device.VLAN || '', 'Power Consumption (W)': `${device.PowerConsumptionW || 0}`, 'Warranty Expiry': device.WarrantyExpiry || '', 'Maintenance Responsible': device.MaintenanceResponsible, Location: rack ? rack.Location : '', Floor: rack ? rack.Floor : '', Notes: device.Notes || 'No notes in dummy data' }} />;
+const RackDetails: React.FC<{ rack: IRack }> = ({ rack }) => <Details rows={{ 'Rack-ID': rack.RackKey, Location: rack.Location, Room: rack.Room, Floor: rack.Floor, RackHeightU: `${rack.RackHeightU}`, Responsible: rack.Responsible, Occupancy: rack.Occupancy, Devices: `${mockDevices.filter((device) => device.RackKey === rack.RackKey).length}`, 'Used U': `${getUsedU(rack).toFixed(1)}`, 'Free U': `${(rack.RackHeightU - getUsedU(rack)).toFixed(1)}`, Notes: rack.Notes || 'No notes in dummy data' }} />;
+const DeviceDetails: React.FC<{ device: IDevice; rack?: IRack }> = ({ device, rack }) => <Details rows={{ 'Device ID / DeviceName': `${device.DeviceKey} / ${device.DeviceName}`, 'Device Type': device.DeviceType, Manufacturer: device.Manufacturer || '', Model: device.Model || '', 'Serial Number': device.SerialNumber || '', AssetTag: device.AssetTag || '', 'Rack-ID': device.RackKey, UPosition: `${device.UPosition}`, UHeight: `${getUHeight(device)}`, RackSide: getSide(device), MountWidth: getWidth(device), HorizontalSlot: `${getSlot(device)}`, 'IP Address': device.IPAddress || '', VLAN: device.VLAN || '', 'Power Consumption (W)': `${device.PowerConsumptionW || 0}`, 'Warranty Expiry': device.WarrantyExpiry || '', 'Maintenance Responsible': device.MaintenanceResponsible, Location: rack ? rack.Location : '', Room: rack ? rack.Room : '', Floor: rack ? rack.Floor : '', Notes: device.Notes || 'No notes in dummy data' }} />;
 const Details: React.FC<{ rows: { [key: string]: string } }> = ({ rows }) => <dl className={styles.details}>{Object.keys(rows).map((key) => <React.Fragment key={key}><dt>{key}</dt><dd>{rows[key]}</dd></React.Fragment>)}</dl>;
-const inventoryValue = (column: string, device: IDevice): string | number => { const rack = getRack(device); const values: { [key: string]: string | number } = { Device: `${device.DeviceKey} / ${device.DeviceName}`, Type: device.DeviceType, Manufacturer: device.Manufacturer || '', Model: device.Model || '', Rack: device.RackKey, Location: rack ? rack.Location : '', Floor: rack ? rack.Floor : '', UPosition: device.UPosition, UHeight: getUHeight(device), Side: getSide(device), Width: getWidth(device), 'IP Address': device.IPAddress || '', VLAN: device.VLAN || '', 'Serial Number': device.SerialNumber || '', 'Warranty Expiry': device.WarrantyExpiry || '', 'Maintenance Responsible': device.MaintenanceResponsible }; return values[column] || ''; };
+const inventoryValue = (column: string, device: IDevice): string | number => { const rack = getRack(device); const values: { [key: string]: string | number } = { Device: `${device.DeviceKey} / ${device.DeviceName}`, Type: device.DeviceType, Manufacturer: device.Manufacturer || '', Model: device.Model || '', Rack: device.RackKey, Location: rack ? rack.Location : '', Room: rack ? rack.Room : '', Floor: rack ? rack.Floor : '', UPosition: device.UPosition, UHeight: getUHeight(device), Side: getSide(device), Width: getWidth(device), 'IP Address': device.IPAddress || '', VLAN: device.VLAN || '', 'Serial Number': device.SerialNumber || '', 'Warranty Expiry': device.WarrantyExpiry || '', 'Maintenance Responsible': device.MaintenanceResponsible }; return values[column] || ''; };
 
 export default ServerRoomDigitalTwin;

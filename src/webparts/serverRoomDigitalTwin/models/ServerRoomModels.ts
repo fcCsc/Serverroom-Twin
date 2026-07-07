@@ -6,6 +6,7 @@ export type RackSide = 'Front' | 'Rear';
 export interface IRack {
   RackKey: string;
   Floor: string;
+  Room: string;
   Location: string;
   RackHeightU: number;
   Responsible: string;
