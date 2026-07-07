@@ -20,7 +20,9 @@ export default class ServerRoomDigitalTwinWebPart extends BaseClientSideWebPart<
       description: this.properties.description,
       racksListName: this.properties.racksListName || 'Racks',
       devicesListName: this.properties.devicesListName || 'Devices',
-      useDummyData: this.properties.useDummyData !== false
+      useDummyData: this.properties.useDummyData !== false,
+      currentSiteUrl: this.context.pageContext.web.absoluteUrl,
+      spHttpClient: this.context.spHttpClient
     });
     ReactDom.render(element, this.domElement);
   }

@@ -71,3 +71,17 @@ tbody tr:hover, .selectedRow { background: rgba(107,220,255,.09); }
 .legoDevice.selectedDevice { box-shadow: 0 0 0 3px rgba(255,255,255,.82), 0 0 34px rgba(107,220,255,.82); filter: brightness(1.2); transform: translateZ(72px) translateY(-5px); z-index: 5; }
 .deviceNav { background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; color: #cfe4fb; cursor: pointer; display: block; margin: 6px 0 6px 16px; padding: 8px 10px; text-align: left; width: calc(100% - 16px); }
 .locationGroup summary { cursor: pointer; }
+.sceneMessage { background: rgba(255,204,0,.12); border: 1px solid rgba(255,204,0,.32); border-radius: 12px; color: #ffe27a; margin: 0 0 12px; padding: 10px 12px; }
+.headerControls select, .settingsPanel select { background-color: #0f1b2b; color: #eef6ff; }
+.headerControls select option, .settingsPanel select option { background: #0f1b2b; color: #eef6ff; }
+.headerControls input:focus, .headerControls select:focus, .headerControls button:focus, .settingsPanel select:focus, .settingsPanel input:focus, .settingsPanel button:focus { outline: 2px solid rgba(107,220,255,.76); outline-offset: 2px; }
+.settingsPanel { background: rgba(5,13,24,.88); border: 1px solid rgba(107,220,255,.24); border-radius: 18px; color: #d8e8f8; display: grid; gap: 10px; margin-top: 14px; max-height: 720px; overflow: auto; padding: 16px; }
+.settingsPanel h2 { margin: 0; }
+.settingsPanel label { color: #d8e8f8; display: grid; gap: 5px; font-size: 12px; }
+.settingsPanel input, .settingsPanel select { border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 8px 10px; }
+.columnToggleGrid { display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.settingsActions { display: flex; gap: 8px; flex-wrap: wrap; }
+.settingsActions button { background: rgba(107,220,255,.14); border: 1px solid rgba(107,220,255,.36); border-radius: 12px; color: #eaf8ff; cursor: pointer; font-weight: 800; padding: 9px 12px; }
+.validationOk, .validationNotice { border-radius: 12px; padding: 10px; }
+.validationOk { background: rgba(80,210,140,.12); border: 1px solid rgba(80,210,140,.35); }
+.validationNotice { background: rgba(255,170,80,.12); border: 1px solid rgba(255,170,80,.38); }

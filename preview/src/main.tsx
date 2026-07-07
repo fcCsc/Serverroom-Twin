@@ -7,8 +7,8 @@ ReactDOM.render(
   <React.StrictMode>
     <ServerRoomDigitalTwin
       description="Static GitHub Pages preview"
-      racksListName="Preview Racks"
-      devicesListName="Preview Devices"
+      racksListName="Racks"
+      devicesListName="Devices"
       useDummyData={true}
     />
   </React.StrictMode>,

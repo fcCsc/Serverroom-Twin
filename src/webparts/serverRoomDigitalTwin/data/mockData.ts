@@ -28,3 +28,29 @@ export const mockDevices: IDevice[] = [
   { DeviceKey: 'SW-DEMO-02', DeviceName: 'Training Switch', RackKey: 'RACK-C-01', UPosition: 40, UHeight: 1, DeviceType: 'Switch', IPAddress: 'Documentation only', VLAN: 'VLAN-DEMO-TRAIN', PowerConsumptionW: 90, SerialNumber: 'SN-DEMO-SW02', WarrantyExpiry: '2028-08-15', MaintenanceResponsible: 'Training Team', Manufacturer: 'Contoso Network', Model: 'CN-SW-48', AssetTag: 'ASSET-DEMO-1003', RackSide: 'Front', MountWidth: 'Full', HorizontalSlot: 1 },
   { DeviceKey: 'UPS-DEMO-02', DeviceName: 'Training UPS', RackKey: 'RACK-C-02', UPosition: 1, UHeight: 4, DeviceType: 'UPS', IPAddress: 'Documentation only', VLAN: 'Facilities', PowerConsumptionW: 0, SerialNumber: 'SN-DEMO-UPS02', WarrantyExpiry: '2027-10-01', MaintenanceResponsible: 'Operations Team', Manufacturer: 'Tailspin Power', Model: 'TP-UPS-4U', AssetTag: 'ASSET-DEMO-4002', RackSide: 'Rear', MountWidth: 'Full', HorizontalSlot: 1 }
 ];
+
+export const defaultInventoryColumns: string[] = ['Device', 'Type', 'Manufacturer', 'Model', 'Rack', 'Location', 'Room / Floor', 'UPosition', 'UHeight', 'Side', 'Width', 'IP Address', 'VLAN', 'Serial Number', 'Warranty Expiry', 'Maintenance Responsible'];
+
+export const defaultAppConfiguration = {
+  racksListName: 'Racks',
+  devicesListName: 'Devices',
+  configListName: 'ServerRoomAppConfig' as const,
+  useDummyData: true,
+  allowDummyFallback: true,
+  defaultRackSide: 'Front' as const,
+  defaultMountWidth: 'Full' as const,
+  defaultUHeight: 1,
+  inventoryVisibleColumns: defaultInventoryColumns,
+  columnMappings: {
+    racks: { RackKey: 'Rack-ID', Location: 'Location', Floor: 'floor', RackHeightU: 'height unit', Responsible: 'Responsible', Occupancy: 'Occupancy', Notes: 'Notes' },
+    devices: { DeviceKey: 'Device ID', DeviceName: 'Device ID', RackKey: 'Rack-ID', UPosition: 'U-Position', DeviceType: 'Device Type', IPAddress: 'IP Address', VLAN: 'VLAN', PowerConsumptionW: 'Power Consumption (W)', SerialNumber: 'Serial Number', WarrantyExpiry: 'Warranty Expiry', MaintenanceResponsible: 'Maintenance Responsible', UHeight: 'UHeight', Manufacturer: 'Manufacturer', Model: 'Model', AssetTag: 'AssetTag', RackSide: 'RackSide', MountWidth: 'MountWidth', HorizontalSlot: 'HorizontalSlot', Notes: 'Notes' }
+  }
+};
+
+export const mockListDiscovery = {
+  lists: [
+    { title: 'Racks', fields: ['Rack-ID', 'floor', 'Location', 'height unit', 'Responsible', 'Occupancy', 'Notes'].map((field) => ({ title: field, internalName: field })) },
+    { title: 'Devices', fields: ['Device ID', 'Rack-ID', 'U-Position', 'Device Type', 'IP Address', 'VLAN', 'Power Consumption (W)', 'Serial Number', 'Warranty Expiry', 'Maintenance Responsible', 'UHeight', 'Manufacturer', 'Model', 'AssetTag', 'RackSide', 'MountWidth', 'HorizontalSlot', 'Notes'].map((field) => ({ title: field, internalName: field })) },
+    { title: 'ServerRoomAppConfig', fields: ['Title', 'ConfigJson'].map((field) => ({ title: field, internalName: field })) }
+  ]
+};

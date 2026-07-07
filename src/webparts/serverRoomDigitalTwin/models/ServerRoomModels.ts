@@ -60,3 +60,78 @@ export interface IColumnMappingSettings {
     maintenanceResponsible: 'Maintenance Responsible';
   };
 }
+
+export interface IRackColumnMappings {
+  RackKey: string;
+  Location: string;
+  Floor: string;
+  RackHeightU: string;
+  Responsible: string;
+  Occupancy: string;
+  Notes?: string;
+}
+
+export interface IDeviceColumnMappings {
+  DeviceKey: string;
+  DeviceName: string;
+  RackKey: string;
+  UPosition: string;
+  DeviceType: string;
+  IPAddress: string;
+  VLAN: string;
+  PowerConsumptionW: string;
+  SerialNumber: string;
+  WarrantyExpiry: string;
+  MaintenanceResponsible: string;
+  UHeight?: string;
+  Manufacturer?: string;
+  Model?: string;
+  AssetTag?: string;
+  RackSide?: string;
+  MountWidth?: string;
+  HorizontalSlot?: string;
+  Notes?: string;
+}
+
+export interface IAppColumnMappings {
+  racks: IRackColumnMappings;
+  devices: IDeviceColumnMappings;
+}
+
+export interface IAppConfiguration {
+  racksListName: string;
+  devicesListName: string;
+  columnMappings: IAppColumnMappings;
+  inventoryVisibleColumns: string[];
+  useDummyData: boolean;
+  allowDummyFallback: boolean;
+  defaultRackSide: RackSide;
+  defaultMountWidth: MountWidth;
+  defaultUHeight: number;
+  configListName: 'ServerRoomAppConfig';
+}
+
+export interface IDataProviderResult {
+  racks: IRack[];
+  devices: IDevice[];
+  warning?: string;
+}
+
+export interface IListFieldOption {
+  title: string;
+  internalName: string;
+}
+
+export interface IListOption {
+  title: string;
+  fields: IListFieldOption[];
+}
+
+export interface IListDiscoveryResult {
+  lists: IListOption[];
+}
+
+export interface IConnectionValidationResult {
+  ok: boolean;
+  messages: string[];
+}

@@ -3,4 +3,6 @@ export interface IServerRoomDigitalTwinProps {
   racksListName: string;
   devicesListName: string;
   useDummyData: boolean;
+  currentSiteUrl?: string;
+  spHttpClient?: unknown;
 }
