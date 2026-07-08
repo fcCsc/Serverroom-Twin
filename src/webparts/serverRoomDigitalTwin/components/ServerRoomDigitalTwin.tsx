@@ -1,142 +1,170 @@
 import * as React from 'react';
 import styles from './ServerRoomDigitalTwin.module.scss';
-import { defaultAssetLibraryPath, mockDevices, mockModelAssets, mockRacks, mockRooms } from '../data/mockData';
-import { IDevice, IModelAsset, IRack, IRoom, DeviceType, RackSide } from '../models/ServerRoomModels';
+import { mockDevices, mockRacks, mockRooms } from '../data/mockData';
+import { IDevice, IRack, IRoom, DeviceType, MountWidth, RackSide } from '../models/ServerRoomModels';
 import { IServerRoomDigitalTwinProps } from './IServerRoomDigitalTwinProps';
-import Rack2DFallbackView from './Rack2DFallbackView';
-import ServerRoom3DView from './ServerRoom3DView';
 
-const deviceTypeOptions: Array<DeviceType | 'All'> = ['All', 'Server', 'Switch', 'Storage', 'Firewall', 'PatchPanel', 'UPS'];
-const rackSideOptions: Array<RackSide | 'All'> = ['All', 'Front', 'Rear'];
+const rackSideOptions: RackSide[] = ['Front', 'Rear'];
+const deviceTypes: DeviceType[] = ['Switch', 'Server', 'Firewall', 'Storage', 'UPS', 'PatchPanel'];
 
-const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksListName, devicesListName, modelAssetsListName, deviceTypeAssetMappingsListName, assetLibraryPath, currentSiteUrl, enableGlbLoading, useDummyData }) => {
+const typeLabels: { [key in DeviceType]: string } = {
+  Switch: 'Switch / network',
+  Server: 'Server / compute',
+  Firewall: 'Firewall / security',
+  Storage: 'Storage',
+  UPS: 'UPS / power',
+  PatchPanel: 'Patch panel'
+};
+
+const widthPercent: { [key in MountWidth]: number } = {
+  Full: 100,
+  Half: 50,
+  Third: 33.333,
+  Quarter: 25
+};
+
+const getLocation = (room: IRoom): string => room.Location || 'Demo Campus';
+const getFloor = (room: IRoom): string => room.Floor || 'Floor 1';
+const getDeviceHeight = (device: IDevice): number => device.UHeight || 1;
+const getDeviceLeft = (device: IDevice): number => {
+  const width = widthPercent[device.MountWidth];
+  return Math.max(0, Math.min(100 - width, (device.HorizontalSlot - 1) * width));
+};
+
+const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksListName, devicesListName, modelAssetsListName, deviceTypeAssetMappingsListName, assetLibraryPath, useDummyData }) => {
   const rooms: IRoom[] = mockRooms;
   const racks: IRack[] = mockRacks;
   const devices: IDevice[] = mockDevices;
-  const modelAssets: IModelAsset[] = mockModelAssets;
-  const resolvedAssetLibraryPath = assetLibraryPath || defaultAssetLibraryPath;
 
-  const [selectedRoomKey, setSelectedRoomKey] = React.useState<string>(rooms[0].RoomKey);
-  const [selectedRackKey, setSelectedRackKey] = React.useState<string>(racks[0].RackKey);
+  const locations = Array.from(new Set(rooms.map(getLocation)));
+  const [selectedLocation, setSelectedLocation] = React.useState<string>(locations[0]);
+  const floors = Array.from(new Set(rooms.filter((room) => getLocation(room) === selectedLocation).map(getFloor)));
+  const [selectedFloor, setSelectedFloor] = React.useState<string>(floors[0]);
+  const visibleRooms = rooms.filter((room) => getLocation(room) === selectedLocation && getFloor(room) === selectedFloor);
+  const visibleRoomKeys = visibleRooms.map((room) => room.RoomKey);
+  const visibleRacks = racks.filter((rack) => visibleRoomKeys.indexOf(rack.RoomKey) > -1);
+  const [selectedRackKey, setSelectedRackKey] = React.useState<string>(visibleRacks[0].RackKey);
   const [selectedDeviceKey, setSelectedDeviceKey] = React.useState<string | undefined>();
-  const [search, setSearch] = React.useState<string>('');
-  const [deviceTypeFilter, setDeviceTypeFilter] = React.useState<DeviceType | 'All'>('All');
-  const [rackSideFilter, setRackSideFilter] = React.useState<RackSide | 'All'>('All');
+  const [rackSide, setRackSide] = React.useState<RackSide>('Front');
   const [settingsOpen, setSettingsOpen] = React.useState<boolean>(false);
-  const [show2DFallback, setShow2DFallback] = React.useState<boolean>(false);
-  const [sceneMessage, setSceneMessage] = React.useState<string>('');
+  const [visibleColumns, setVisibleColumns] = React.useState<{ [key: string]: boolean }>({ manufacturer: true, model: true, ip: true, vlan: true, serial: true, warranty: true, maintenance: true });
 
-  const roomRacks = racks.filter((rack) => rack.RoomKey === selectedRoomKey);
-  const selectedRack: IRack | undefined = racks.filter((rack) => rack.RackKey === selectedRackKey)[0];
-  const selectedDevice: IDevice | undefined = selectedDeviceKey ? devices.filter((device) => device.DeviceKey === selectedDeviceKey)[0] : undefined;
+  React.useEffect(() => {
+    const nextFloors = Array.from(new Set(rooms.filter((room) => getLocation(room) === selectedLocation).map(getFloor)));
+    if (nextFloors.indexOf(selectedFloor) === -1) setSelectedFloor(nextFloors[0]);
+  }, [selectedLocation, selectedFloor, rooms]);
 
-  const filteredDevices: IDevice[] = devices.filter((device) => {
-    const rack = racks.filter((candidate) => candidate.RackKey === device.RackKey)[0];
-    const room = rack ? rooms.filter((candidate) => candidate.RoomKey === rack.RoomKey)[0] : undefined;
-    const searchText = `${device.Title} ${device.DeviceType} ${device.Owner} ${device.Environment || ''} ${device.RackSide} ${rack ? rack.Title : ''} ${room ? room.Title : ''}`.toLowerCase();
-    const matchesSearch = searchText.indexOf(search.toLowerCase()) > -1;
-    const matchesDeviceType = deviceTypeFilter === 'All' || device.DeviceType === deviceTypeFilter;
-    const matchesRackSide = rackSideFilter === 'All' || device.RackSide === rackSideFilter;
-    const matchesRoom = !rack || rack.RoomKey === selectedRoomKey;
-    return matchesSearch && matchesDeviceType && matchesRackSide && matchesRoom;
-  });
+  React.useEffect(() => {
+    if (visibleRacks.length > 0 && !visibleRacks.some((rack) => rack.RackKey === selectedRackKey)) {
+      setSelectedRackKey(visibleRacks[0].RackKey);
+      setSelectedDeviceKey(undefined);
+    }
+  }, [selectedRackKey, visibleRacks]);
 
-  const rackDevices = selectedRack ? filteredDevices.filter((device) => device.RackKey === selectedRack.RackKey) : filteredDevices;
+  const selectedRack = racks.filter((rack) => rack.RackKey === selectedRackKey)[0] || visibleRacks[0];
+  const selectedDevice = selectedDeviceKey ? devices.filter((device) => device.DeviceKey === selectedDeviceKey)[0] : undefined;
+  const areaDevices = devices.filter((device) => visibleRacks.some((rack) => rack.RackKey === device.RackKey));
+  const sideDevices = areaDevices.filter((device) => device.RackSide === rackSide);
 
-  const onRoomClick = (roomKey: string): void => {
-    const firstRack = racks.filter((rack) => rack.RoomKey === roomKey)[0];
-    setSelectedRoomKey(roomKey);
-    if (firstRack) setSelectedRackKey(firstRack.RackKey);
-    setSelectedDeviceKey(undefined);
-  };
-
-  const onRackClick = (rackKey: string): void => {
-    const rack = racks.filter((candidate) => candidate.RackKey === rackKey)[0];
-    if (rack) setSelectedRoomKey(rack.RoomKey);
+  const onRackSelected = (rackKey: string): void => {
     setSelectedRackKey(rackKey);
     setSelectedDeviceKey(undefined);
   };
 
-  const onDeviceClick = (device: IDevice): void => {
-    const rack = racks.filter((candidate) => candidate.RackKey === device.RackKey)[0];
-    if (rack) setSelectedRoomKey(rack.RoomKey);
+  const onDeviceSelected = (device: IDevice): void => {
     setSelectedRackKey(device.RackKey);
     setSelectedDeviceKey(device.DeviceKey);
   };
 
-  const onSceneUnavailable = React.useCallback((message: string): void => {
-    setSceneMessage(message);
-    setShow2DFallback(true);
-  }, []);
+  const toggleColumn = (column: string): void => {
+    setVisibleColumns({ ...visibleColumns, [column]: !visibleColumns[column] });
+  };
 
   return (
     <section className={styles.digitalTwin}>
       <header className={styles.header}>
         <div>
-          <span className={styles.kicker}>SharePoint guidance prototype</span>
-          <h1>Server Room Digital Twin</h1>
-          <p>Data-driven rack placement, device lookup and 3D visual guidance using safe dummy data.</p>
+          <span className={styles.kicker}>2D / 2.5D rack visual dashboard MVP</span>
+          <h1>Rack Elevation Navigator</h1>
+          <p>Dummy-data rack elevations with U-accurate placement, mount width lanes, front/rear views and SharePoint mapping placeholders.</p>
         </div>
         <div className={styles.headerControls}>
-          <input aria-label="Search racks and devices" placeholder="Search room, rack, device, owner..." value={search} onChange={(event) => setSearch(event.currentTarget.value)} />
-          <select aria-label="Device type filter" value={deviceTypeFilter} onChange={(event) => setDeviceTypeFilter(event.currentTarget.value as DeviceType | 'All')}>
-            {deviceTypeOptions.map((type) => <option key={type}>{type}</option>)}
-          </select>
-          <select aria-label="Rack side filter" value={rackSideFilter} onChange={(event) => setRackSideFilter(event.currentTarget.value as RackSide | 'All')}>
-            {rackSideOptions.map((side) => <option key={side}>{side}</option>)}
-          </select>
-          <button onClick={() => setShow2DFallback(!show2DFallback)}>{show2DFallback ? 'Show 3D view' : 'Show 2D fallback'}</button>
-          <button onClick={() => setSettingsOpen(!settingsOpen)}>{settingsOpen ? 'Close settings' : 'Admin settings'}</button>
+          <div className={styles.sideToggle} aria-label="Rack side toggle">
+            {rackSideOptions.map((side) => <button key={side} className={rackSide === side ? styles.activeToggle : ''} onClick={() => setRackSide(side)}>{side}</button>)}
+          </div>
+          <button onClick={() => setSettingsOpen(!settingsOpen)}>{settingsOpen ? 'Close admin settings' : 'Admin settings'}</button>
         </div>
       </header>
 
       <div className={styles.workspace}>
         <aside className={styles.sidebar}>
-          <h2>Locations, rooms & racks</h2>
-          {rooms.map((room) => (
-            <div key={room.RoomKey} className={styles.locationGroup}>
-              <button className={`${styles.roomNav} ${selectedRoomKey === room.RoomKey ? styles.active : ''}`} onClick={() => onRoomClick(room.RoomKey)}>{room.Title}</button>
-              {racks.filter((rack) => rack.RoomKey === room.RoomKey).map((rack) => (
-                <button key={rack.RackKey} className={`${styles.rackNav} ${selectedRackKey === rack.RackKey ? styles.active : ''}`} onClick={() => onRackClick(rack.RackKey)}>
-                  <span>{rack.Title}</span><span>{rack.RackHeightU}U</span>
-                </button>
+          <h2>Location → Floor → Rack</h2>
+          {locations.map((location) => (
+            <div key={location} className={styles.locationGroup}>
+              <button className={`${styles.roomNav} ${selectedLocation === location ? styles.active : ''}`} onClick={() => setSelectedLocation(location)}>{location}</button>
+              {selectedLocation === location && Array.from(new Set(rooms.filter((room) => getLocation(room) === location).map(getFloor))).map((floor) => (
+                <div key={floor} className={styles.floorGroup}>
+                  <button className={`${styles.floorNav} ${selectedFloor === floor ? styles.active : ''}`} onClick={() => setSelectedFloor(floor)}>{floor}</button>
+                  {selectedFloor === floor && visibleRacks.map((rack) => <button key={rack.RackKey} className={`${styles.rackNav} ${selectedRackKey === rack.RackKey ? styles.active : ''}`} onClick={() => onRackSelected(rack.RackKey)}><span>{rack.Title}</span><span>{rack.RackHeightU}U</span></button>)}
+                </div>
               ))}
             </div>
           ))}
+          <div className={styles.legend}>
+            <h3>Device type marking</h3>
+            {deviceTypes.map((type) => <span key={type} className={`${styles.legendItem} ${styles[`type${type}`]}`}><i />{typeLabels[type]}</span>)}
+          </div>
         </aside>
 
         <main className={styles.rackView}>
-          <div className={styles.sectionTitle}>
-            <h2>{show2DFallback ? '2D rack fallback' : '3D server room guidance'}</h2>
-            <span>{useDummyData ? 'Dummy data mode' : 'SharePoint Lists mode'}</span>
+          <div className={styles.sectionTitle}><h2>{selectedLocation} • {selectedFloor}</h2><span>{visibleRacks.length} racks • {rackSide} view</span></div>
+          <div className={styles.elevationGrid}>
+            {visibleRacks.map((rack) => <RackElevation key={rack.RackKey} rack={rack} devices={sideDevices.filter((device) => device.RackKey === rack.RackKey)} rackSide={rackSide} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackSelected} onDeviceSelected={onDeviceSelected} />)}
           </div>
-          {sceneMessage && <p className={styles.sceneMessage}>{sceneMessage}</p>}
-          {show2DFallback ? (
-            <Rack2DFallbackView racks={roomRacks} devices={filteredDevices} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackClick} onDeviceSelected={onDeviceClick} />
-          ) : (
-            <ServerRoom3DView racks={roomRacks} devices={filteredDevices} modelAssets={modelAssets} assetLibraryPath={resolvedAssetLibraryPath} currentSiteUrl={currentSiteUrl} enableGlbLoading={enableGlbLoading && !useDummyData} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackClick} onDeviceSelected={onDeviceClick} onSceneUnavailable={onSceneUnavailable} />
-          )}
         </main>
 
         <aside className={styles.detailPanel}>
-          <h2>{selectedDevice ? 'Device details' : 'Rack details'}</h2>
-          {selectedDevice ? <Details rows={{ Device: selectedDevice.Title, Type: selectedDevice.DeviceType, Rack: selectedRack ? selectedRack.Title : selectedDevice.RackKey, Side: selectedDevice.RackSide, Position: `U${selectedDevice.UPosition} / ${selectedDevice.UHeight}U`, Width: `${selectedDevice.MountWidth}, slot ${selectedDevice.HorizontalSlot}`, Owner: selectedDevice.Owner, Environment: selectedDevice.Environment || 'Not specified', Asset: `${selectedDevice.ModelAssetKey}.glb`, Notes: selectedDevice.Notes }} /> : selectedRack && <Details rows={{ Rack: selectedRack.Title, Room: rooms.filter((room) => room.RoomKey === selectedRack.RoomKey)[0].Title, Row: selectedRack.RowLabel, Number: selectedRack.RackNumber, Height: `${selectedRack.RackHeightU}U`, Position: `X ${selectedRack.XPosition}, Z ${selectedRack.ZPosition}`, Rotation: `${selectedRack.Rotation}°`, Asset: `${selectedRack.ModelAssetKey}.glb`, Devices: `${devices.filter((device) => device.RackKey === selectedRack.RackKey).length}`, Notes: selectedRack.Notes }} />}
-          {settingsOpen && <div className={styles.settings}><h3>Future SharePoint mapping</h3><p>Racks list: {racksListName || 'Racks'}</p><p>Devices list: {devicesListName || 'Devices'}</p><p>Model assets list: {modelAssetsListName || 'Model Assets'}</p><p>Device type asset mappings list: {deviceTypeAssetMappingsListName || 'DeviceTypeAssetMappings'}</p><p>Asset library path: {resolvedAssetLibraryPath}</p><p>Use dummy data: {useDummyData ? 'Yes' : 'No'}</p><p>GLB loading: {enableGlbLoading && !useDummyData ? 'Enabled for SharePoint runtime' : 'Disabled for dummy preview / primitive fallback'}</p><p>Column mapping controls will map RackKey, DeviceKey, UPosition, UHeight, MountWidth, HorizontalSlot, RackSide and ModelAssetKey in a later integration phase.</p></div>}
+          <h2>Rack Details</h2>
+          {selectedRack && <Details rows={{ Rack: selectedRack.Title, Location: selectedLocation, Floor: selectedFloor, Row: selectedRack.RowLabel, Number: selectedRack.RackNumber, Height: `${selectedRack.RackHeightU}U`, Side: rackSide, Notes: selectedRack.Notes }} />}
+          <h2>Device Details</h2>
+          {selectedDevice ? <Details rows={{ Device: selectedDevice.Title, Type: typeLabels[selectedDevice.DeviceType], Rack: selectedRack ? selectedRack.Title : selectedDevice.RackKey, Position: `U${selectedDevice.UPosition} / ${getDeviceHeight(selectedDevice)}U`, Width: `${selectedDevice.MountWidth}, slot ${selectedDevice.HorizontalSlot}`, Manufacturer: selectedDevice.Manufacturer || 'Demo manufacturer', Model: selectedDevice.Model || 'Demo model', IP: selectedDevice.IPAddress || 'Demo IP only', VLAN: selectedDevice.VLAN || 'Demo VLAN', Serial: selectedDevice.SerialNumber || 'Demo serial', Warranty: selectedDevice.WarrantyExpiry || 'Demo warranty', Maintenance: selectedDevice.MaintenanceResponsible || selectedDevice.Owner, Notes: selectedDevice.Notes }} /> : <p className={styles.panelHint}>Select a device in an elevation to inspect inventory details.</p>}
+          {settingsOpen && <AdminSettings visibleColumns={visibleColumns} toggleColumn={toggleColumn} racksListName={racksListName} devicesListName={devicesListName} modelAssetsListName={modelAssetsListName} deviceTypeAssetMappingsListName={deviceTypeAssetMappingsListName} assetLibraryPath={assetLibraryPath} useDummyData={useDummyData} />}
         </aside>
       </div>
 
       <footer className={styles.tablePanel}>
-        <h2>Device inventory</h2>
-        <table><thead><tr><th>Device</th><th>Type</th><th>Rack</th><th>Side</th><th>U position</th><th>Height</th><th>Width / slot</th><th>Owner</th></tr></thead><tbody>
-          {(selectedRack ? rackDevices : filteredDevices).map((device) => {
+        <div className={styles.inventoryHeader}><h2>Inventory</h2><span>{sideDevices.length} dummy devices shown for {selectedLocation} / {selectedFloor} / {rackSide}</span></div>
+        <table><thead><tr><th>Device</th><th>Type</th><th>Rack</th>{visibleColumns.manufacturer && <th>Manufacturer</th>}{visibleColumns.model && <th>Model</th>}{visibleColumns.ip && <th>IP</th>}{visibleColumns.vlan && <th>VLAN</th>}{visibleColumns.serial && <th>Serial</th>}{visibleColumns.warranty && <th>Warranty</th>}{visibleColumns.maintenance && <th>Maintenance responsible</th>}</tr></thead><tbody>
+          {sideDevices.map((device) => {
             const rack = racks.filter((candidate) => candidate.RackKey === device.RackKey)[0];
-            return <tr key={device.DeviceKey} className={selectedDeviceKey === device.DeviceKey ? styles.selectedRow : ''} onClick={() => onDeviceClick(device)}><td>{device.Title}</td><td>{device.DeviceType}</td><td>{rack ? rack.Title : device.RackKey}</td><td>{device.RackSide}</td><td>U{device.UPosition}</td><td>{device.UHeight}U</td><td>{device.MountWidth} / {device.HorizontalSlot}</td><td>{device.Owner}</td></tr>;
+            return <tr key={device.DeviceKey} className={selectedDeviceKey === device.DeviceKey ? styles.selectedRow : ''} onClick={() => onDeviceSelected(device)}><td>{device.Title}</td><td>{typeLabels[device.DeviceType]}</td><td>{rack ? rack.Title : device.RackKey}</td>{visibleColumns.manufacturer && <td>{device.Manufacturer}</td>}{visibleColumns.model && <td>{device.Model}</td>}{visibleColumns.ip && <td>{device.IPAddress}</td>}{visibleColumns.vlan && <td>{device.VLAN}</td>}{visibleColumns.serial && <td>{device.SerialNumber}</td>}{visibleColumns.warranty && <td>{device.WarrantyExpiry}</td>}{visibleColumns.maintenance && <td>{device.MaintenanceResponsible}</td>}</tr>;
           })}
         </tbody></table>
       </footer>
     </section>
   );
 };
+
+const RackElevation: React.FC<{ rack: IRack; devices: IDevice[]; rackSide: RackSide; selectedRackKey?: string; selectedDeviceKey?: string; onRackSelected: (rackKey: string) => void; onDeviceSelected: (device: IDevice) => void; }> = ({ rack, devices, selectedRackKey, selectedDeviceKey, onRackSelected, onDeviceSelected }) => {
+  const units = Array.from({ length: rack.RackHeightU }, (_, index) => rack.RackHeightU - index);
+  return (
+    <article className={`${styles.elevationCard} ${selectedRackKey === rack.RackKey ? styles.selectedRack : ''}`} onClick={() => onRackSelected(rack.RackKey)}>
+      <div className={styles.rackTop}><strong>{rack.Title}</strong><span>{rack.RackHeightU}U</span></div>
+      <div className={styles.rackShell} style={{ gridTemplateRows: `repeat(${rack.RackHeightU}, minmax(10px, 1fr))` }}>
+        <div className={styles.uLabels}>{units.map((unit) => <span key={unit}>U{unit}</span>)}</div>
+        <div className={styles.rackSlots}>{units.map((unit) => <span key={unit} />)}{devices.map((device) => {
+          const height = getDeviceHeight(device);
+          const top = ((rack.RackHeightU - device.UPosition - height + 1) / rack.RackHeightU) * 100;
+          return <button key={device.DeviceKey} className={`${styles.deviceBlock} ${styles[`type${device.DeviceType}`]} ${selectedDeviceKey === device.DeviceKey ? styles.selectedDevice : ''}`} style={{ top: `${top}%`, height: `${(height / rack.RackHeightU) * 100}%`, left: `${getDeviceLeft(device)}%`, width: `${widthPercent[device.MountWidth]}%` }} onClick={(event) => { event.stopPropagation(); onDeviceSelected(device); }}><strong>{device.Title}</strong><span>U{device.UPosition} • {height}U • {device.MountWidth}</span></button>;
+        })}</div>
+      </div>
+    </article>
+  );
+};
+
+const AdminSettings: React.FC<{ visibleColumns: { [key: string]: boolean }; toggleColumn: (column: string) => void; racksListName?: string; devicesListName?: string; modelAssetsListName?: string; deviceTypeAssetMappingsListName?: string; assetLibraryPath?: string; useDummyData?: boolean; }> = ({ visibleColumns, toggleColumn, racksListName, devicesListName, modelAssetsListName, deviceTypeAssetMappingsListName, assetLibraryPath, useDummyData }) => (
+  <div className={styles.settings}><h3>Visible inventory columns</h3>{Object.keys(visibleColumns).map((column) => <label key={column}><input type="checkbox" checked={visibleColumns[column]} onChange={() => toggleColumn(column)} /> {column}</label>)}<h3>SharePoint column mapping placeholders</h3><p>Racks list: {racksListName || 'Racks'}</p><p>Devices list: {devicesListName || 'Devices'}</p><p>Model assets list: {modelAssetsListName || 'Model Assets'}</p><p>Device type mappings list: {deviceTypeAssetMappingsListName || 'DeviceTypeAssetMappings'}</p><p>Asset library path placeholder: {assetLibraryPath || 'Site Assets/ServerRoomAssets'}</p><p>Dummy data only: {useDummyData ? 'Yes' : 'Yes for MVP preview'}</p><p>Mapping placeholders: Location, Floor, RackKey, DeviceKey, UPosition, UHeight, MountWidth, HorizontalSlot, RackSide, Manufacturer, Model, IPAddress, VLAN, SerialNumber, WarrantyExpiry, MaintenanceResponsible.</p></div>
+);
 
 const Details: React.FC<{ rows: { [key: string]: string } }> = ({ rows }) => <dl className={styles.details}>{Object.keys(rows).map((key) => <React.Fragment key={key}><dt>{key}</dt><dd>{rows[key]}</dd></React.Fragment>)}</dl>;
 

@@ -7,6 +7,8 @@ export interface IRoom {
   Title: string;
   Description: string;
   SortOrder: number;
+  Location?: string;
+  Floor?: string;
 }
 
 export interface IRack {
@@ -42,6 +44,9 @@ export interface IDevice {
   PowerConsumption?: string;
   SerialNumber?: string;
   WarrantyExpiry?: string;
+  Manufacturer?: string;
+  Model?: string;
+  MaintenanceResponsible?: string;
 }
 
 export interface IModelAsset {
