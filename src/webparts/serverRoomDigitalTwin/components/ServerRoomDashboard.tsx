@@ -8,9 +8,9 @@ import { IInfraDevice, IInfraRack, IRackPlacement, RackMountSide } from '../mode
 import { IServerRoomDigitalTwinProps } from './IServerRoomDigitalTwinProps';
 
 const ServerRoomDashboard: React.FC<IServerRoomDigitalTwinProps> = (props) => {
-  const racks = dashboardRacks as unknown as IInfraRack[];
-  const devices = dashboardDevices as unknown as IInfraDevice[];
-  const placements = dashboardPlacements as unknown as IRackPlacement[];
+  const racks: IInfraRack[] = dashboardRacks;
+  const devices: IInfraDevice[] = dashboardDevices;
+  const placements: IRackPlacement[] = dashboardPlacements;
   const [selectedRackId, setSelectedRackId] = React.useState<string | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = React.useState<string | null>(null);
   const [rackSide, setRackSide] = React.useState<RackMountSide>('front');
