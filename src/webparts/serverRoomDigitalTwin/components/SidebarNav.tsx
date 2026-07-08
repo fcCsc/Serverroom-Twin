@@ -1,7 +1,7 @@
 import * as React from 'react';
 import styles from './ServerRoomDigitalTwin.module.scss';
 
-const navItems = ['Standort', 'Räume', 'Racks', 'Geräte', 'Netzwerk', 'Alarme', 'Tickets', 'Wartung', 'Berichte', 'Dokumente', 'Einstellungen'];
+const navItems = ['Standort', 'Räume', 'Racks', 'Geräte', 'Netzwerk', 'Wartung', 'Berichte', 'Dokumente', 'Einstellungen'];
 
 const SidebarNav: React.FC = () => (
   <aside className={styles.appSidebar}>

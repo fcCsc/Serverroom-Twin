@@ -13,7 +13,7 @@ const RoomOverview: React.FC<{ racks: IInfraRack[]; devices: IInfraDevice[]; pla
       <div className={styles.floorGrid} />
       {racks.map((rack) => <RackTile key={rack.id} rack={rack} placements={getRackPlacements(rack.id, placements)} selected={selectedRackId === rack.id} onRackSelected={onRackSelected} />)}
     </section>
-    <div className={styles.roomBottom}><div><h3>Status legend</h3><StatusLegend /></div><div><h3>MiniMap / Raumplan</h3><MiniMap racks={racks} selectedRackId={selectedRackId} /></div></div>
+    <div className={styles.roomBottom}><div><h3>Device type / rack category legend</h3><StatusLegend /></div><div><h3>MiniMap / Raumplan</h3><MiniMap racks={racks} selectedRackId={selectedRackId} /></div></div>
   </div>
 );
 

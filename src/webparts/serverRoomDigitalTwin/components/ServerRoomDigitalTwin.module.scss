@@ -152,4 +152,5 @@ tbody tr:hover, .selectedRow { background: rgba(142, 203, 255, .09); }
 @keyframes modeIn { from { opacity: .68; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 1300px) { .infraDashboard { grid-template-columns: 1fr; } .appSidebar { display: none; } .contentGrid, .roomBottom, .kpiGrid { grid-template-columns: 1fr; } .detailsPanel { position: static; } }
 
-/* Conflict resolution note: dashboard shell, room overview, and rack focus styles are intentionally kept together in this module for SPFx CSS-module generation. */
+
+.categoryNetwork { --status: #44b8ff; } .categoryCompute { --status: #24a66c; } .categorySecurity { --status: #f18a2a; } .categoryStorage { --status: #9d67ff; } .categoryPower { --status: #8b4531; } .categoryPatch { --status: #aeb8c4; }

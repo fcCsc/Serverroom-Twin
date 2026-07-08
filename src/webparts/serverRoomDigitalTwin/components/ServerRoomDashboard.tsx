@@ -3,14 +3,15 @@ import AppShell from './AppShell';
 import RoomOverview from './RoomOverview';
 import RackFocusView from './RackFocusView';
 import RightDetailsPanel from './RightDetailsPanel';
-import { dashboardDevices, dashboardPlacements, dashboardRacks } from '../data/mockData';
+import { getServerRoomDataSource } from '../dataSources/dataSourceFactory';
 import { IInfraDevice, IInfraRack, IRackPlacement, RackMountSide } from '../models/ServerRoomModels';
 import { IServerRoomDigitalTwinProps } from './IServerRoomDigitalTwinProps';
 
 const ServerRoomDashboard: React.FC<IServerRoomDigitalTwinProps> = (props) => {
-  const racks: IInfraRack[] = dashboardRacks;
-  const devices: IInfraDevice[] = dashboardDevices;
-  const placements: IRackPlacement[] = dashboardPlacements;
+  const dataSource = getServerRoomDataSource(props.useDummyData !== false);
+  const racks: IInfraRack[] = dataSource.getRacks();
+  const devices: IInfraDevice[] = dataSource.getDevices();
+  const placements: IRackPlacement[] = dataSource.getRackPlacements();
   const [selectedRackId, setSelectedRackId] = React.useState<string | null>(null);
   const [selectedDeviceId, setSelectedDeviceId] = React.useState<string | null>(null);
   const [rackSide, setRackSide] = React.useState<RackMountSide>('front');
