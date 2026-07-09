@@ -1,4 +1,4 @@
-import { IDevice, IDeviceTypeAssetMapping, IModelAsset, IRack, IRoom } from '../models/ServerRoomModels';
+import { IDevice, IDeviceTypeAssetMapping, IInfraDevice, IInfraRack, IModelAsset, IRack, IRackPlacement, IRoom } from '../models/ServerRoomModels';
 
 export const defaultAssetLibraryPath: string = 'Site Assets/ServerRoom3DAssets';
 
@@ -62,4 +62,33 @@ export const mockDeviceTypeAssetMappings: IDeviceTypeAssetMapping[] = [
   { DeviceType: 'Storage', ModelAssetKey: 'storage', DefaultMountWidth: 'Full', DefaultUHeight: 4 },
   { DeviceType: 'UPS', ModelAssetKey: 'ups', DefaultMountWidth: 'Full', DefaultUHeight: 4 },
   { DeviceType: 'PatchPanel', ModelAssetKey: 'patchpanel', DefaultMountWidth: 'Full', DefaultUHeight: 1 }
+];
+
+export const dashboardDataVersion: string = 'preview-documentation-dashboard-v1';
+
+export const dashboardRacks: IInfraRack[] = [
+  { id: 'rack-a01', name: 'Rack A01', site: 'DC-1 Frankfurt', room: 'Raum A', row: 'A', heightU: 42, positionX: 18, positionY: 26, status: 'online', type: 'Network / Compute', width: '600 mm', depth: '1200 mm' },
+  { id: 'rack-a02', name: 'Rack A02', site: 'DC-1 Frankfurt', room: 'Raum A', row: 'A', heightU: 24, positionX: 38, positionY: 30, status: 'warning', type: 'Power / Edge', width: '600 mm', depth: '1000 mm' },
+  { id: 'rack-a03', name: 'Rack A03', site: 'DC-1 Frankfurt', room: 'Raum A', row: 'A', heightU: 12, positionX: 58, positionY: 34, status: 'maintenance', type: 'Patch / Access', width: '600 mm', depth: '800 mm' },
+  { id: 'rack-b01', name: 'Rack B01', site: 'DC-1 Frankfurt', room: 'Raum A', row: 'B', heightU: 9, positionX: 77, positionY: 42, status: 'critical', type: 'Lab / Test', width: '600 mm', depth: '800 mm' }
+];
+
+export const dashboardDevices: IInfraDevice[] = [
+  { id: 'dev-sw-core-01', hostname: 'SW-FRA-A01-CORE', type: 'Switch', vendor: 'Demo Networks', model: 'DNX-48C', serialNumber: 'DEMO-SN-SW001', ipAddress: '192.0.2.10', vlan: 'DEMO-110', status: 'online', owner: 'Network Team', operatingSystem: 'DemoNOS 4.2', lastUpdate: '2026-06-18', uptime: '128 days', warrantyExpiry: '2028-06-30', notes: 'Core switching documentation placeholder.' },
+  { id: 'dev-srv-app-01', hostname: 'APP-FRA-A01-01', type: 'Server', vendor: 'Demo Compute', model: 'DC-2U-Pro', serialNumber: 'DEMO-SN-SRV001', ipAddress: '192.0.2.21', vlan: 'DEMO-210', status: 'online', owner: 'Platform Team', operatingSystem: 'Demo Linux 12', lastUpdate: '2026-06-21', uptime: '42 days', warrantyExpiry: '2029-03-31', notes: 'Application host placeholder.' },
+  { id: 'dev-fw-edge-01', hostname: 'FW-FRA-A02-EDGE', type: 'Firewall', vendor: 'Demo Security', model: 'DFW-1U', serialNumber: 'DEMO-SN-FW001', ipAddress: '192.0.2.41', vlan: 'DEMO-410', status: 'warning', owner: 'Security Team', operatingSystem: 'DemoShield 8', lastUpdate: '2026-06-12', uptime: '76 days', warrantyExpiry: '2028-09-30', notes: 'Firewall documentation placeholder.' },
+  { id: 'dev-ups-a02-01', hostname: 'UPS-FRA-A02-01', type: 'UPS', vendor: 'Demo Power', model: 'DUPS-3U', serialNumber: 'DEMO-SN-UPS001', ipAddress: '192.0.2.51', vlan: 'DEMO-510', status: 'maintenance', owner: 'Facilities Team', operatingSystem: 'Embedded Demo', lastUpdate: '2026-05-30', uptime: '300 days', warrantyExpiry: '2029-01-31', notes: 'Power device placeholder.' },
+  { id: 'dev-patch-a03-01', hostname: 'PATCH-FRA-A03-01', type: 'PatchPanel', vendor: 'Demo Cabling', model: 'DPP-48', serialNumber: 'DEMO-SN-PP001', ipAddress: 'N/A', vlan: 'DEMO-PATCH', status: 'online', owner: 'Network Team', operatingSystem: 'N/A', lastUpdate: '2026-04-15', uptime: 'N/A', warrantyExpiry: '2027-05-31', notes: 'Patch field documentation placeholder.' },
+  { id: 'dev-lab-b01-01', hostname: 'LAB-FRA-B01-01', type: 'Storage', vendor: 'Demo Storage', model: 'DS-Lab', serialNumber: 'DEMO-SN-LAB001', ipAddress: '192.0.2.72', vlan: 'DEMO-320', status: 'critical', owner: 'Infrastructure Team', operatingSystem: 'Demo StorageOS', lastUpdate: '2026-06-01', uptime: '19 days', warrantyExpiry: '2028-11-30', notes: 'Intentional conflict demo.' },
+  { id: 'dev-lab-b01-02', hostname: 'LAB-FRA-B01-02', type: 'Firewall', vendor: 'Demo Security', model: 'DFW-Lab', serialNumber: 'DEMO-SN-LAB002', ipAddress: '192.0.2.73', vlan: 'DEMO-420', status: 'critical', owner: 'Network Team', operatingSystem: 'DemoShield Lab', lastUpdate: '2026-06-01', uptime: '19 days', warrantyExpiry: '2027-11-30', notes: 'Intentional conflict demo.' }
+];
+
+export const dashboardPlacements: IRackPlacement[] = [
+  { id: 'pl-sw-core-01', rackId: 'rack-a01', deviceId: 'dev-sw-core-01', startU: 41, heightU: 1, mountSide: 'both', mountType: 'standard', frontLabel: 'SW-FRA-A01-CORE', rearLabel: 'SW-FRA-A01-CORE Rear' },
+  { id: 'pl-srv-app-01', rackId: 'rack-a01', deviceId: 'dev-srv-app-01', startU: 34, heightU: 2, mountSide: 'front', mountType: 'standard', frontLabel: 'APP-FRA-A01-01', rearLabel: 'Cable mgmt' },
+  { id: 'pl-fw-edge-01', rackId: 'rack-a02', deviceId: 'dev-fw-edge-01', startU: 21, heightU: 1, mountSide: 'front', mountType: 'standard', frontLabel: 'FW-FRA-A02-EDGE', rearLabel: 'FW rear' },
+  { id: 'pl-ups-a02-01', rackId: 'rack-a02', deviceId: 'dev-ups-a02-01', startU: 1, heightU: 3, mountSide: 'rear', mountType: 'standard', frontLabel: 'UPS front', rearLabel: 'UPS-FRA-A02-01' },
+  { id: 'pl-patch-a03-01', rackId: 'rack-a03', deviceId: 'dev-patch-a03-01', startU: 12, heightU: 1, mountSide: 'both', mountType: 'standard', frontLabel: 'PATCH-FRA-A03-01', rearLabel: 'PATCH rear' },
+  { id: 'pl-lab-b01-01', rackId: 'rack-b01', deviceId: 'dev-lab-b01-01', startU: 5, heightU: 2, mountSide: 'front', mountType: 'standard', frontLabel: 'LAB-FRA-B01-01', rearLabel: 'Storage rear' },
+  { id: 'pl-lab-b01-02', rackId: 'rack-b01', deviceId: 'dev-lab-b01-02', startU: 5, heightU: 1, mountSide: 'front', mountType: 'standard', frontLabel: 'LAB-FRA-B01-02', rearLabel: 'FW rear' }
 ];

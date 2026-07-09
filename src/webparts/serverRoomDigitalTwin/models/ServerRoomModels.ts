@@ -23,6 +23,7 @@ export interface IRack {
   Rotation: number;
   ModelAssetKey: string;
   Notes: string;
+  Responsible?: string;
 }
 
 export interface IDevice {
@@ -42,7 +43,9 @@ export interface IDevice {
   IPAddress?: string;
   VLAN?: string;
   PowerConsumption?: string;
+  PowerConsumptionW?: number;
   SerialNumber?: string;
+  AssetTag?: string;
   WarrantyExpiry?: string;
   Manufacturer?: string;
   Model?: string;
@@ -82,4 +85,53 @@ export interface IListMappingSettings {
   horizontalSlotColumn: string;
   rackSideColumn: string;
   modelAssetKeyColumn: string;
+}
+
+export type InfraStatus = 'online' | 'warning' | 'critical' | 'offline' | 'maintenance';
+export type RackMountSide = 'front' | 'rear' | 'both';
+export type RackMountType = 'standard' | 'vertical-pdu' | 'side' | 'shelf' | 'blank';
+
+export interface IInfraRack {
+  id: string;
+  name: string;
+  site: string;
+  room: string;
+  row: string;
+  heightU: number;
+  positionX: number;
+  positionY: number;
+  status: InfraStatus;
+  type: string;
+  width: string;
+  depth: string;
+}
+
+export interface IInfraDevice {
+  id: string;
+  hostname: string;
+  type: DeviceType;
+  vendor: string;
+  model: string;
+  serialNumber: string;
+  ipAddress: string;
+  vlan?: string;
+  status: InfraStatus;
+  owner: string;
+  operatingSystem: string;
+  lastUpdate: string;
+  uptime: string;
+  warrantyExpiry?: string;
+  notes: string;
+}
+
+export interface IRackPlacement {
+  id: string;
+  rackId: string;
+  deviceId: string;
+  startU: number;
+  heightU: number;
+  mountSide: RackMountSide;
+  mountType: RackMountType;
+  frontLabel: string;
+  rearLabel: string;
 }

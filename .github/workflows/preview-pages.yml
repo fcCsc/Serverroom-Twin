@@ -30,6 +30,13 @@ jobs:
       - name: Build preview
         run: npm run preview:build
 
+      - name: Upload static preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: serverroom-twin-preview
+          path: dist/preview
+          if-no-files-found: error
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
