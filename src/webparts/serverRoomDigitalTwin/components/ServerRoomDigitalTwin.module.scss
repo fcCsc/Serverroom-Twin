@@ -120,7 +120,7 @@ tbody tr:hover, .selectedRow { background: rgba(142, 203, 255, .09); }
 .kpiCard { padding: 16px; } .kpiCard span, .kpiCard small { color: #9fb2c8; display: block; } .kpiCard strong { display: block; font-size: 28px; margin: 8px 0 3px; }
 .contentGrid { align-items: start; display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) 360px; }
 .primaryCanvas { min-width: 0; }
-.modePanel { animation: modeIn .28s ease; padding: 22px; }
+.modePanel { animation: modeIn .28s ease; padding: 22px; transition: opacity .24s ease, transform .24s ease; }
 .roomHero { align-items: center; display: flex; justify-content: space-between; margin-bottom: 18px; padding: 22px; }
 .roomHero h2, .focusHeader h2 { font-size: 32px; letter-spacing: -.035em; margin: 6px 0; } .roomHero p, .focusHeader p { color: #aebed1; }
 .roomStats { display: grid; grid-template-columns: auto auto; gap: 6px 10px; } .roomStats strong { font-size: 28px; } .roomStats span { color: #9fb2c8; }

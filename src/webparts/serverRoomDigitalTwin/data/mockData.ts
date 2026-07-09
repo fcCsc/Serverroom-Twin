@@ -70,6 +70,8 @@ export const mockDeviceTypeAssetMappings: IDeviceTypeAssetMapping[] = [
   { DeviceType: 'PatchPanel', ModelAssetKey: 'patchpanel', DefaultMountWidth: 'Full', DefaultUHeight: 1 }
 ];
 
+export const dashboardDataVersion: string = 'preview-documentation-dashboard-v1';
+
 export const dashboardRacks: IInfraRack[] = [
   { id: 'rack-a01', name: 'Rack A01', site: 'DC-1 Frankfurt', room: 'Raum A', row: 'A', heightU: 42, positionX: 18, positionY: 26, status: 'online', type: 'Network / Compute', width: '600 mm', depth: '1200 mm' },
   { id: 'rack-a02', name: 'Rack A02', site: 'DC-1 Frankfurt', room: 'Raum A', row: 'A', heightU: 24, positionX: 38, positionY: 30, status: 'warning', type: 'Power / Edge', width: '600 mm', depth: '1000 mm' },

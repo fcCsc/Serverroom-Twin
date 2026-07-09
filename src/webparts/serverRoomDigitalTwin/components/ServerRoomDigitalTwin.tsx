@@ -6,4 +6,6 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = (props) => 
   <ServerRoomDashboard {...props} />
 );
 
+ServerRoomDigitalTwin.displayName = 'ServerRoomDigitalTwin';
+
 export default ServerRoomDigitalTwin;
