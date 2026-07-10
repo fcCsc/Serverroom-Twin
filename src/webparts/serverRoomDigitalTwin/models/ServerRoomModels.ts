@@ -1,4 +1,4 @@
-export type DeviceType = 'Server' | 'Switch' | 'Storage' | 'Firewall' | 'PatchPanel' | 'UPS';
+export type DeviceType = 'Server' | 'Switch' | 'Storage' | 'Firewall' | 'PatchPanel' | 'UPS' | 'Backup';
 export type MountWidth = 'Full' | 'Half' | 'Third' | 'Quarter';
 export type RackSide = 'Front' | 'Rear';
 
