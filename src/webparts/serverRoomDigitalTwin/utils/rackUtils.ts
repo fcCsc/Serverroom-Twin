@@ -29,3 +29,4 @@ export const getPlacementConflicts = (placements: readonly IRackPlacement[], sid
   return placements.reduce((result, placement) => ({ ...result, [placement.id]: Object.keys(occupancy).some((key) => occupancy[key].indexOf(placement.id) > -1 && occupancy[key].length > 1) }), {});
 };
 
+export const statusLabel = (status: string): string => ({ online: 'Online', warning: 'Warning', critical: 'Critical', offline: 'Offline', maintenance: 'Maintenance' }[status] || status);

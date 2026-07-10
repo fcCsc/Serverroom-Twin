@@ -104,11 +104,7 @@ export interface IInfraRack {
   type: string;
   width: string;
   depth: string;
-  floor?: string;
-  responsible?: string;
-  notes?: string;
 }
-
 
 export interface IInfraDevice {
   id: string;
@@ -138,7 +134,4 @@ export interface IRackPlacement {
   mountType: RackMountType;
   frontLabel: string;
   rearLabel: string;
-  mountWidth?: MountWidth;
-  horizontalSlot?: number;
 }
-
