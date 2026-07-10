@@ -6,10 +6,11 @@ import './preview.css';
 ReactDOM.render(
   <React.StrictMode>
     <ServerRoomDigitalTwin
-      description="Static GitHub Pages preview"
+      description="GLB Block Visualizer Preview v1"
       racksListName="Preview Racks"
       devicesListName="Preview Devices"
       useDummyData={true}
+      enableGlbLoading={true}
     />
   </React.StrictMode>,
   document.getElementById('root')
