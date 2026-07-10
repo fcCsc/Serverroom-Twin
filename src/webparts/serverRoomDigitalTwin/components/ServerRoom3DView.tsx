@@ -41,15 +41,30 @@ const slotCountByMountWidth: { [key in MountWidth]: number } = {
 };
 
 const cloneObject = (source: THREE.Object3D): THREE.Object3D => source.clone(true);
-
 const trimSlashes = (value: string): string => value.replace(/^\/+|\/+$/g, '');
-
 const encodePath = (path: string): string => path.split('/').map((part) => encodeURIComponent(part)).join('/');
+const unique = (values: string[]): string[] => values.filter((value, index) => value && values.indexOf(value) === index);
 
-const buildAssetUrl = (assetLibraryPath: string, currentSiteUrl: string | undefined, asset: IModelAsset | undefined): string | undefined => {
-  if (!asset || !currentSiteUrl) return undefined;
-  const relativePath = asset.LibraryRelativePath || `${assetLibraryPath}/${asset.FileName}`;
-  return `${currentSiteUrl.replace(/\/+$/g, '')}/${encodePath(trimSlashes(relativePath))}`;
+const assetCandidateNames = (asset: IModelAsset): string[] => {
+  const key = asset.ModelAssetKey.toLowerCase();
+  const defaultNames = [asset.FileName, `${key}.glb`];
+  if (asset.DefaultForDeviceType === 'Rack' || key === 'rack') return unique([...defaultNames, 'rack-frame.glb', 'rack-cabinet.glb']);
+  if (key === 'switch' || key === 'patchpanel') return unique([...defaultNames, 'block-small.glb', 'block-normal.glb']);
+  return unique([...defaultNames, 'block-normal.glb', 'block-small.glb']);
+};
+
+const buildAssetUrls = (assetLibraryPath: string, currentSiteUrl: string | undefined, asset: IModelAsset | undefined): string[] => {
+  if (!asset) return [];
+  const candidates = assetCandidateNames(asset);
+  const base = trimSlashes(assetLibraryPath || 'assets/glb');
+
+  if (!currentSiteUrl) {
+    return unique(candidates.map((fileName) => `${base}/${encodePath(fileName)}`));
+  }
+
+  const site = currentSiteUrl.replace(/\/+$/g, '');
+  const sharePointPaths = [asset.LibraryRelativePath || `${assetLibraryPath}/${asset.FileName}`, ...candidates.map((fileName) => `${assetLibraryPath}/${fileName}`)];
+  return unique(sharePointPaths.map((relativePath) => `${site}/${encodePath(trimSlashes(relativePath))}`));
 };
 
 const widthForMount = (mountWidth: MountWidth): number => rackWidth / slotCountByMountWidth[mountWidth];
@@ -77,15 +92,19 @@ const zForSide = (device: IDevice, selected: boolean): number => {
 
 const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => {
   const group = new THREE.Group();
-  const frameMaterial = new THREE.MeshStandardMaterial({ color: selected ? 0x6bdcff : 0x22364b, transparent: true, opacity: 0.72 });
+  const frameMaterial = new THREE.MeshStandardMaterial({ color: selected ? 0x6bdcff : 0x22364b, transparent: true, opacity: 0.72, metalness: 0.35, roughness: 0.45 });
   const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x081522, transparent: true, opacity: 0.18 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(rackWidth, rackHeight, rackDepth), bodyMaterial);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(rackWidth, rackHeight, rackDepth)), new THREE.LineBasicMaterial({ color: selected ? 0x6bdcff : 0x6f8daa }));
   const top = new THREE.Mesh(new THREE.BoxGeometry(rackWidth + 0.08, 0.05, rackDepth + 0.08), frameMaterial);
   const bottom = top.clone();
+  const leftRail = new THREE.Mesh(new THREE.BoxGeometry(0.05, rackHeight, 0.05), frameMaterial);
+  const rightRail = leftRail.clone();
   top.position.y = rackHeight / 2;
   bottom.position.y = -rackHeight / 2;
-  group.add(body, edges, top, bottom);
+  leftRail.position.set(-rackWidth / 2, 0, -rackDepth / 2);
+  rightRail.position.set(rackWidth / 2, 0, -rackDepth / 2);
+  group.add(body, edges, top, bottom, leftRail, rightRail);
   group.userData = { type: 'rack', rackKey: rack.RackKey };
   return group;
 };
@@ -94,7 +113,7 @@ const createPrimitiveDevice = (rack: IRack, device: IDevice, selected: boolean):
   const width = widthForMount(device.MountWidth) - 0.03;
   const height = heightForDevice(rack, device) - 0.01;
   const color = deviceColors[device.DeviceType] || 0x7aa8ff;
-  const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: selected ? color : 0x000000, emissiveIntensity: selected ? 0.22 : 0 });
+  const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: selected ? color : 0x000000, emissiveIntensity: selected ? 0.22 : 0, metalness: 0.25, roughness: 0.5 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, deviceDepth), material);
   mesh.position.set(xForSlot(device.MountWidth, device.HorizontalSlot), yForDevice(rack, device), zForSide(device, selected));
   mesh.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
@@ -132,6 +151,9 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
     keyLight.position.set(4, 7, 5);
     scene.add(keyLight);
+    const fillLight = new THREE.DirectionalLight(0x6bdcff, 0.55);
+    fillLight.position.set(-5, 4, -3);
+    scene.add(fillLight);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), new THREE.MeshStandardMaterial({ color: 0x071827, roughness: 0.9 }));
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -rackHeight / 2 - 0.04;
@@ -150,15 +172,15 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         return;
       }
       if (!enableGlbLoading) return;
-      const asset = findAsset(assetKey);
-      const url = buildAssetUrl(assetLibraryPath, currentSiteUrl, asset);
-      if (!url) return;
-      loader.load(url, (gltf) => {
-        assetCache[assetKey] = gltf.scene;
-        onLoaded(cloneObject(gltf.scene));
-      }, undefined, () => {
-        assetCache[assetKey] = undefined;
-      });
+      const urls = buildAssetUrls(assetLibraryPath, currentSiteUrl, findAsset(assetKey));
+      const tryLoad = (index: number): void => {
+        if (index >= urls.length) return;
+        loader.load(urls[index], (gltf) => {
+          assetCache[assetKey] = gltf.scene;
+          onLoaded(cloneObject(gltf.scene));
+        }, undefined, () => tryLoad(index + 1));
+      };
+      tryLoad(0);
     };
 
     const roomGroup = new THREE.Group();
