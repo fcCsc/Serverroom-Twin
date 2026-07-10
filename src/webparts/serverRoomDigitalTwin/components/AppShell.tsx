@@ -2,6 +2,7 @@ import * as React from 'react';
 import styles from './ServerRoomDigitalTwin.module.scss';
 import SidebarNav from './SidebarNav';
 import DashboardHeader from './DashboardHeader';
+import HeaderKpis from './HeaderKpis';
 import { IInfraDevice, IInfraRack, IRackPlacement } from '../models/ServerRoomModels';
 
 interface IAppShellProps {
@@ -19,6 +20,7 @@ const AppShell: React.FC<IAppShellProps> = ({ racks, devices, placements, settin
     <SidebarNav />
     <div className={styles.appMain}>
       <DashboardHeader settingsOpen={settingsOpen} onSettingsToggle={onSettingsToggle} />
+      <HeaderKpis racks={racks} devices={devices} placements={placements} />
       <div className={styles.contentGrid}>
         <main className={styles.primaryCanvas}>{children}</main>
         {details}
