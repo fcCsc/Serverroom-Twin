@@ -1,10 +1,13 @@
 import * as React from 'react';
 import styles from './ServerRoomDigitalTwin.module.scss';
-import { mockDevices, mockRacks, mockRooms } from '../data/mockData';
+import ServerRoom3DView from './ServerRoom3DView';
+import { defaultAssetLibraryPath, mockDevices, mockModelAssets, mockRacks, mockRooms } from '../data/mockData';
 import { IDevice, IRack, IRoom, DeviceType, MountWidth, RackSide } from '../models/ServerRoomModels';
 import { IServerRoomDigitalTwinProps } from './IServerRoomDigitalTwinProps';
 
 const rackSideOptions: RackSide[] = ['Front', 'Rear'];
+type ViewMode = 'Room' | 'Elevation';
+const viewModes: ViewMode[] = ['Room', 'Elevation'];
 const deviceTypes: DeviceType[] = ['Switch', 'Server', 'Firewall', 'Storage', 'UPS', 'PatchPanel'];
 
 const typeLabels: { [key in DeviceType]: string } = {
@@ -30,8 +33,9 @@ const getDeviceLeft = (device: IDevice): number => {
   const width = widthPercent[device.MountWidth];
   return Math.max(0, Math.min(100 - width, (device.HorizontalSlot - 1) * width));
 };
+const hasBrowserWindow = (): boolean => typeof window !== 'undefined';
 
-const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksListName, devicesListName, modelAssetsListName, deviceTypeAssetMappingsListName, assetLibraryPath, useDummyData }) => {
+const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksListName, devicesListName, modelAssetsListName, deviceTypeAssetMappingsListName, assetLibraryPath, currentSiteUrl, enableGlbLoading, useDummyData }) => {
   const rooms: IRoom[] = mockRooms;
   const racks: IRack[] = mockRacks;
   const devices: IDevice[] = mockDevices;
@@ -43,15 +47,17 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
   const visibleRooms = rooms.filter((room) => getLocation(room) === selectedLocation && getFloor(room) === selectedFloor);
   const visibleRoomKeys = visibleRooms.map((room) => room.RoomKey);
   const visibleRacks = racks.filter((rack) => visibleRoomKeys.indexOf(rack.RoomKey) > -1);
-  const [selectedRackKey, setSelectedRackKey] = React.useState<string>(visibleRacks[0].RackKey);
+  const [selectedRackKey, setSelectedRackKey] = React.useState<string>(visibleRacks[0] ? visibleRacks[0].RackKey : '');
   const [selectedDeviceKey, setSelectedDeviceKey] = React.useState<string | undefined>();
   const [rackSide, setRackSide] = React.useState<RackSide>('Front');
+  const [viewMode, setViewMode] = React.useState<ViewMode>('Room');
   const [settingsOpen, setSettingsOpen] = React.useState<boolean>(false);
+  const [sceneMessage, setSceneMessage] = React.useState<string | undefined>();
   const [visibleColumns, setVisibleColumns] = React.useState<{ [key: string]: boolean }>({ manufacturer: true, model: true, ip: true, vlan: true, serial: true, warranty: true, maintenance: true });
 
   React.useEffect(() => {
     const nextFloors = Array.from(new Set(rooms.filter((room) => getLocation(room) === selectedLocation).map(getFloor)));
-    if (nextFloors.indexOf(selectedFloor) === -1) setSelectedFloor(nextFloors[0]);
+    if (nextFloors.length > 0 && nextFloors.indexOf(selectedFloor) === -1) setSelectedFloor(nextFloors[0]);
   }, [selectedLocation, selectedFloor, rooms]);
 
   React.useEffect(() => {
@@ -65,30 +71,39 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
   const selectedDevice = selectedDeviceKey ? devices.filter((device) => device.DeviceKey === selectedDeviceKey)[0] : undefined;
   const areaDevices = devices.filter((device) => visibleRacks.some((rack) => rack.RackKey === device.RackKey));
   const sideDevices = areaDevices.filter((device) => device.RackSide === rackSide);
+  const effectiveAssetLibraryPath = assetLibraryPath || (currentSiteUrl ? defaultAssetLibraryPath : 'assets/glb');
+  const glbLoadingEnabled = enableGlbLoading !== false;
 
-  const onRackSelected = (rackKey: string): void => {
+  const onRackSelected = React.useCallback((rackKey: string): void => {
     setSelectedRackKey(rackKey);
     setSelectedDeviceKey(undefined);
-  };
+  }, []);
 
-  const onDeviceSelected = (device: IDevice): void => {
+  const onDeviceSelected = React.useCallback((device: IDevice): void => {
     setSelectedRackKey(device.RackKey);
     setSelectedDeviceKey(device.DeviceKey);
-  };
+  }, []);
 
-  const toggleColumn = (column: string): void => {
-    setVisibleColumns({ ...visibleColumns, [column]: !visibleColumns[column] });
-  };
+  const toggleColumn = React.useCallback((column: string): void => {
+    setVisibleColumns((current) => ({ ...current, [column]: !current[column] }));
+  }, []);
+
+  const onSceneUnavailable = React.useCallback((message: string): void => {
+    setSceneMessage(message);
+  }, []);
 
   return (
     <section className={styles.digitalTwin}>
       <header className={styles.header}>
         <div>
-          <span className={styles.kicker}>2D / 2.5D rack visual dashboard MVP</span>
-          <h1>Rack Elevation Navigator</h1>
-          <p>Dummy-data rack elevations with U-accurate placement, mount width lanes, front/rear views and SharePoint mapping placeholders.</p>
+          <span className={styles.kicker}>Serverroom Twin • Final visual preview</span>
+          <h1>Rack Room Digital Twin</h1>
+          <p>Premium 3D/2.5D rack room with GLB asset loading, U-accurate rack placement, front/rear inspection and SharePoint mapping placeholders.</p>
         </div>
         <div className={styles.headerControls}>
+          <div className={styles.sideToggle} aria-label="View mode toggle">
+            {viewModes.map((mode) => <button key={mode} className={viewMode === mode ? styles.activeToggle : ''} onClick={() => setViewMode(mode)}>{mode === 'Room' ? '3D Room' : 'Rack elevation'}</button>)}
+          </div>
           <div className={styles.sideToggle} aria-label="Rack side toggle">
             {rackSideOptions.map((side) => <button key={side} className={rackSide === side ? styles.activeToggle : ''} onClick={() => setRackSide(side)}>{side}</button>)}
           </div>
@@ -117,18 +132,46 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
         </aside>
 
         <main className={styles.rackView}>
-          <div className={styles.sectionTitle}><h2>{selectedLocation} • {selectedFloor}</h2><span>{visibleRacks.length} racks • {rackSide} view</span></div>
-          <div className={styles.elevationGrid}>
+          <div className={styles.sectionTitle}><h2>{selectedLocation} • {selectedFloor}</h2><span>{visibleRacks.length} racks • {rackSide} • {glbLoadingEnabled ? 'GLB ready' : 'primitive fallback'}</span></div>
+
+          {viewMode === 'Room' && (
+            <div className={styles.scenePanel}>
+              {sceneMessage && <p className={styles.sceneWarning}>{sceneMessage}</p>}
+              <ServerRoom3DView
+                racks={visibleRacks}
+                devices={sideDevices}
+                modelAssets={mockModelAssets}
+                assetLibraryPath={effectiveAssetLibraryPath}
+                currentSiteUrl={currentSiteUrl}
+                enableGlbLoading={glbLoadingEnabled}
+                selectedRackKey={selectedRackKey}
+                selectedDeviceKey={selectedDeviceKey}
+                onRackSelected={onRackSelected}
+                onDeviceSelected={onDeviceSelected}
+                onSceneUnavailable={onSceneUnavailable}
+              />
+              <div className={styles.focusBar}>
+                <strong>{selectedRack ? selectedRack.Title : 'No rack selected'}</strong>
+                <span>{selectedDevice ? `${selectedDevice.Title} • U${selectedDevice.UPosition} • ${selectedDevice.MountWidth}` : 'Click a rack or device to inspect details'}</span>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.elevationHeader}>
+            <h2>{viewMode === 'Room' ? 'Rack elevation fallback' : 'Rack elevation navigator'}</h2>
+            <span>U-accurate placement • {rackSide} view</span>
+          </div>
+          <div className={`${styles.elevationGrid} ${viewMode === 'Room' ? styles.compactElevationGrid : ''}`}>
             {visibleRacks.map((rack) => <RackElevation key={rack.RackKey} rack={rack} devices={sideDevices.filter((device) => device.RackKey === rack.RackKey)} rackSide={rackSide} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackSelected} onDeviceSelected={onDeviceSelected} />)}
           </div>
         </main>
 
         <aside className={styles.detailPanel}>
           <h2>Rack Details</h2>
-          {selectedRack && <Details rows={{ Rack: selectedRack.Title, Location: selectedLocation, Floor: selectedFloor, Row: selectedRack.RowLabel, Number: selectedRack.RackNumber, Height: `${selectedRack.RackHeightU}U`, Side: rackSide, Notes: selectedRack.Notes }} />}
+          {selectedRack && <Details rows={{ Rack: selectedRack.Title, Location: selectedLocation, Floor: selectedFloor, Row: selectedRack.RowLabel, Number: selectedRack.RackNumber, Height: `${selectedRack.RackHeightU}U`, Side: rackSide, Notes: selectedRack.Notes || '' }} />}
           <h2>Device Details</h2>
-          {selectedDevice ? <Details rows={{ Device: selectedDevice.Title, Type: typeLabels[selectedDevice.DeviceType], Rack: selectedRack ? selectedRack.Title : selectedDevice.RackKey, Position: `U${selectedDevice.UPosition} / ${getDeviceHeight(selectedDevice)}U`, Width: `${selectedDevice.MountWidth}, slot ${selectedDevice.HorizontalSlot}`, Manufacturer: selectedDevice.Manufacturer || 'Demo manufacturer', Model: selectedDevice.Model || 'Demo model', IP: selectedDevice.IPAddress || 'Demo IP only', VLAN: selectedDevice.VLAN || 'Demo VLAN', Serial: selectedDevice.SerialNumber || 'Demo serial', Warranty: selectedDevice.WarrantyExpiry || 'Demo warranty', Maintenance: selectedDevice.MaintenanceResponsible || selectedDevice.Owner, Notes: selectedDevice.Notes }} /> : <p className={styles.panelHint}>Select a device in an elevation to inspect inventory details.</p>}
-          {settingsOpen && <AdminSettings visibleColumns={visibleColumns} toggleColumn={toggleColumn} racksListName={racksListName} devicesListName={devicesListName} modelAssetsListName={modelAssetsListName} deviceTypeAssetMappingsListName={deviceTypeAssetMappingsListName} assetLibraryPath={assetLibraryPath} useDummyData={useDummyData} />}
+          {selectedDevice ? <Details rows={{ Device: selectedDevice.Title, Type: typeLabels[selectedDevice.DeviceType], Rack: selectedRack ? selectedRack.Title : selectedDevice.RackKey, Position: `U${selectedDevice.UPosition} / ${getDeviceHeight(selectedDevice)}U`, Width: `${selectedDevice.MountWidth}, slot ${selectedDevice.HorizontalSlot}`, Manufacturer: selectedDevice.Manufacturer || 'Demo manufacturer', Model: selectedDevice.Model || 'Demo model', IP: selectedDevice.IPAddress || 'Demo IP only', VLAN: selectedDevice.VLAN || 'Demo VLAN', Serial: selectedDevice.SerialNumber || 'Demo serial', Warranty: selectedDevice.WarrantyExpiry || 'Demo warranty', Maintenance: selectedDevice.MaintenanceResponsible || selectedDevice.Owner, Notes: selectedDevice.Notes || '' }} /> : <p className={styles.panelHint}>Select a device in the 3D room or rack elevation to inspect inventory details.</p>}
+          {settingsOpen && <AdminSettings visibleColumns={visibleColumns} toggleColumn={toggleColumn} racksListName={racksListName} devicesListName={devicesListName} modelAssetsListName={modelAssetsListName} deviceTypeAssetMappingsListName={deviceTypeAssetMappingsListName} assetLibraryPath={effectiveAssetLibraryPath} useDummyData={useDummyData} enableGlbLoading={glbLoadingEnabled} isPreview={!currentSiteUrl && hasBrowserWindow()} />}
         </aside>
       </div>
 
@@ -162,8 +205,8 @@ const RackElevation: React.FC<{ rack: IRack; devices: IDevice[]; rackSide: RackS
   );
 };
 
-const AdminSettings: React.FC<{ visibleColumns: { [key: string]: boolean }; toggleColumn: (column: string) => void; racksListName?: string; devicesListName?: string; modelAssetsListName?: string; deviceTypeAssetMappingsListName?: string; assetLibraryPath?: string; useDummyData?: boolean; }> = ({ visibleColumns, toggleColumn, racksListName, devicesListName, modelAssetsListName, deviceTypeAssetMappingsListName, assetLibraryPath, useDummyData }) => (
-  <div className={styles.settings}><h3>Visible inventory columns</h3>{Object.keys(visibleColumns).map((column) => <label key={column}><input type="checkbox" checked={visibleColumns[column]} onChange={() => toggleColumn(column)} /> {column}</label>)}<h3>SharePoint column mapping placeholders</h3><p>Racks list: {racksListName || 'Racks'}</p><p>Devices list: {devicesListName || 'Devices'}</p><p>Model assets list: {modelAssetsListName || 'Model Assets'}</p><p>Device type mappings list: {deviceTypeAssetMappingsListName || 'DeviceTypeAssetMappings'}</p><p>Asset library path placeholder: {assetLibraryPath || 'Site Assets/ServerRoomAssets'}</p><p>Dummy data only: {useDummyData ? 'Yes' : 'Yes for MVP preview'}</p><p>Mapping placeholders: Location, Floor, RackKey, DeviceKey, UPosition, UHeight, MountWidth, HorizontalSlot, RackSide, Manufacturer, Model, IPAddress, VLAN, SerialNumber, WarrantyExpiry, MaintenanceResponsible.</p></div>
+const AdminSettings: React.FC<{ visibleColumns: { [key: string]: boolean }; toggleColumn: (column: string) => void; racksListName?: string; devicesListName?: string; modelAssetsListName?: string; deviceTypeAssetMappingsListName?: string; assetLibraryPath?: string; useDummyData?: boolean; enableGlbLoading: boolean; isPreview: boolean; }> = ({ visibleColumns, toggleColumn, racksListName, devicesListName, modelAssetsListName, deviceTypeAssetMappingsListName, assetLibraryPath, useDummyData, enableGlbLoading, isPreview }) => (
+  <div className={styles.settings}><h3>Visible inventory columns</h3>{Object.keys(visibleColumns).map((column) => <label key={column}><input type="checkbox" checked={visibleColumns[column]} onChange={() => toggleColumn(column)} /> {column}</label>)}<h3>SharePoint column mapping placeholders</h3><p>Racks list: {racksListName || 'Racks'}</p><p>Devices list: {devicesListName || 'Devices'}</p><p>Model assets list: {modelAssetsListName || 'Model Assets'}</p><p>Device type mappings list: {deviceTypeAssetMappingsListName || 'DeviceTypeAssetMappings'}</p><p>Asset path: {assetLibraryPath || 'assets/glb'}</p><p>GLB loading: {enableGlbLoading ? 'Enabled' : 'Disabled'}</p><p>Runtime: {isPreview ? 'GitHub Pages preview' : 'SharePoint/SPFx'}</p><p>Dummy data only: {useDummyData ? 'Yes' : 'Yes for MVP preview'}</p><p>Mapping placeholders: Location, Floor, RackKey, DeviceKey, UPosition, UHeight, MountWidth, HorizontalSlot, RackSide, Manufacturer, Model, IPAddress, VLAN, SerialNumber, WarrantyExpiry, MaintenanceResponsible.</p></div>
 );
 
 const Details: React.FC<{ rows: { [key: string]: string } }> = ({ rows }) => <dl className={styles.details}>{Object.keys(rows).map((key) => <React.Fragment key={key}><dt>{key}</dt><dd>{rows[key]}</dd></React.Fragment>)}</dl>;
