@@ -1,6 +1,6 @@
 import { IDevice, IDeviceTypeAssetMapping, IInfraDevice, IInfraRack, IModelAsset, IRack, IRackPlacement, IRoom } from '../models/ServerRoomModels';
 
-export const defaultAssetLibraryPath: string = 'Site Assets/ServerRoom3DAssets';
+export const defaultAssetLibraryPath: string = 'assets/glb';
 
 export const mockRooms: IRoom[] = [
   {
@@ -44,13 +44,13 @@ export const mockDevices: IDevice[] = [
 ];
 
 export const mockModelAssets: IModelAsset[] = [
-  { ModelAssetKey: 'rack', Title: 'Rack cabinet', FileName: 'rack.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/rack.glb`, DefaultForDeviceType: 'Rack', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'switch', Title: 'Network switch', FileName: 'switch.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/switch.glb`, DefaultForDeviceType: 'Switch', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'server', Title: 'Server', FileName: 'server.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/server.glb`, DefaultForDeviceType: 'Server', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'firewall', Title: 'Firewall', FileName: 'firewall.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/firewall.glb`, DefaultForDeviceType: 'Firewall', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'storage', Title: 'Storage array', FileName: 'storage.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/storage.glb`, DefaultForDeviceType: 'Storage', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'ups', Title: 'UPS', FileName: 'ups.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/ups.glb`, DefaultForDeviceType: 'UPS', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
-  { ModelAssetKey: 'patchpanel', Title: 'Patch panel', FileName: 'patchpanel.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/patchpanel.glb`, DefaultForDeviceType: 'PatchPanel', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 }
+  { ModelAssetKey: 'rack', Title: 'Rack cabinet', FileName: 'Rack.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/Rack.glb`, DefaultForDeviceType: 'Rack', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'switch', Title: 'Half-width network panel', FileName: 'Panel-middle.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/Panel-middle.glb`, DefaultForDeviceType: 'Switch', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'server', Title: 'Full-width server panel', FileName: 'Panel-normal.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/Panel-normal.glb`, DefaultForDeviceType: 'Server', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'firewall', Title: 'Full-width security panel', FileName: 'Panel-normal.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/Panel-normal.glb`, DefaultForDeviceType: 'Firewall', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'storage', Title: 'Full-width storage panel', FileName: 'Panel-normal.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/Panel-normal.glb`, DefaultForDeviceType: 'Storage', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'ups', Title: 'Full-width UPS panel', FileName: 'Panel-normal.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/Panel-normal.glb`, DefaultForDeviceType: 'UPS', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 },
+  { ModelAssetKey: 'patchpanel', Title: 'Full-width patch panel', FileName: 'Panel-normal.glb', LibraryRelativePath: `${defaultAssetLibraryPath}/Panel-normal.glb`, DefaultForDeviceType: 'PatchPanel', ScaleX: 1, ScaleY: 1, ScaleZ: 1, RotationOffset: 0 }
 ];
 
 
