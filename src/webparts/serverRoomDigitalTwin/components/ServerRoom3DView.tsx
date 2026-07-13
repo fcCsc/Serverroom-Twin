@@ -21,7 +21,7 @@ interface IServerRoom3DViewProps {
 const rackWidth = 1.2;
 const rackDepth = 1.1;
 const rackHeight = 3.4;
-const deviceDepth = 0.18;
+const deviceDepth = 0.24;
 const focusAnimationSpeed = 0.08;
 
 const deviceColors: { [key: string]: number } = {
@@ -85,9 +85,10 @@ const yForDevice = (rack: IRack, device: IDevice): number => {
 const heightForDevice = (rack: IRack, device: IDevice): number => Math.max((rackHeight / rack.RackHeightU) * device.UHeight, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
-  const base = device.RackSide === 'Rear' ? rackDepth / 2 + deviceDepth / 2 : -rackDepth / 2 - deviceDepth / 2;
-  const emphasis = selected ? 0.2 : 0;
-  return device.RackSide === 'Rear' ? base + emphasis : base - emphasis;
+  const inset = 0.06;
+  const base = device.RackSide === 'Rear' ? rackDepth / 2 - deviceDepth / 2 - inset : -rackDepth / 2 + deviceDepth / 2 + inset;
+  const emphasis = selected ? 0.04 : 0;
+  return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
 };
 
 
@@ -168,18 +169,20 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     const host = hostRef.current;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x07111f);
+    scene.background = createSplineBackground() || new THREE.Color(0xd8bfc0);
+    scene.fog = new THREE.Fog(0xd8bfc0, 7, 20);
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     camera.position.copy(cameraTargetRef.current);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(host.clientWidth || 900, host.clientHeight || 560);
     host.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xddeeff, 0x0b1020, 1.9));
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    scene.add(new THREE.HemisphereLight(0xfff1ef, 0x29383b, 1.85));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.65);
+    keyLight.castShadow = true;
     keyLight.position.set(4, 7, 5);
     scene.add(keyLight);
-    const fillLight = new THREE.DirectionalLight(0x6bdcff, 0.55);
+    const fillLight = new THREE.DirectionalLight(0xff8f99, 0.42);
     fillLight.position.set(-5, 4, -3);
     scene.add(fillLight);
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), new THREE.MeshStandardMaterial({ color: 0x071827, roughness: 0.9, metalness: 0.15 }));
@@ -187,9 +190,14 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -rackHeight / 2 - 0.04;
     scene.add(floor);
-    const grid = new THREE.GridHelper(12, 12, 0x315270, 0x183049);
+    const grid = new THREE.GridHelper(18, 36, 0xef7777, 0x8f8f92);
     grid.position.y = floor.position.y + 0.01;
     scene.add(grid);
+    const fineGrid = new THREE.GridHelper(18, 72, 0x6bb6ff, 0xb79fa1);
+    fineGrid.material.opacity = 0.26;
+    fineGrid.material.transparent = true;
+    fineGrid.position.y = floor.position.y + 0.012;
+    scene.add(fineGrid);
 
     const loader = new GLTFLoader();
     const assetCache: { [key: string]: THREE.Object3D | undefined } = {};
@@ -248,8 +256,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
           tintObject(object, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
           object.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
           primitiveDevice.visible = false;
-          rackGroup.add(object);
-          deviceObjectsRef.current[device.DeviceKey] = object;
+          rackGroup.add(deviceModel);
+          deviceObjectsRef.current[device.DeviceKey] = deviceModel;
         });
       });
     });
@@ -313,8 +321,9 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const selectedDevice = selectedDeviceKey ? devices.filter((device) => device.DeviceKey === selectedDeviceKey)[0] : undefined;
     const selectedRack = selectedDevice ? racks.filter((rack) => rack.RackKey === selectedDevice.RackKey)[0] : selectedRackKey ? racks.filter((rack) => rack.RackKey === selectedRackKey)[0] : undefined;
     if (!selectedRack) return;
+    const rackSide = selectedDevice ? selectedDevice.RackSide : activeRackSide(devices);
     const rackPosition = new THREE.Vector3(selectedRack.XPosition, 0, selectedRack.ZPosition);
-    cameraTargetRef.current = new THREE.Vector3(selectedRack.XPosition, 1.7, selectedRack.ZPosition + 4.4);
+    cameraTargetRef.current = new THREE.Vector3(selectedRack.XPosition, 1.65, sideCameraZ(selectedRack.ZPosition, rackSide));
     lookAtTargetRef.current = rackPosition;
   }, [racks, devices, selectedRackKey, selectedDeviceKey]);
 
