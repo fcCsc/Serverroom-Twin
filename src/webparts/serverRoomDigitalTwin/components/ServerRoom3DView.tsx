@@ -21,7 +21,7 @@ interface IServerRoom3DViewProps {
 const rackWidth = 1.2;
 const rackDepth = 1.1;
 const rackHeight = 3.4;
-const deviceDepth = 0.18;
+const deviceDepth = 0.24;
 const focusAnimationSpeed = 0.08;
 
 const deviceColors: { [key: string]: number } = {
@@ -48,9 +48,9 @@ const unique = (values: string[]): string[] => values.filter((value, index) => v
 const assetCandidateNames = (asset: IModelAsset): string[] => {
   const key = asset.ModelAssetKey.toLowerCase();
   const defaultNames = [asset.FileName, `${key}.glb`];
-  if (asset.DefaultForDeviceType === 'Rack' || key === 'rack') return unique([...defaultNames, 'rack-frame.glb', 'rack-cabinet.glb']);
-  if (key === 'switch' || key === 'patchpanel') return unique([...defaultNames, 'block-small.glb', 'block-normal.glb']);
-  return unique([...defaultNames, 'block-normal.glb', 'block-small.glb']);
+  if (asset.DefaultForDeviceType === 'Rack' || key === 'rack') return unique([...defaultNames, 'Rack.glb', 'rack.glb', 'rack-frame.glb', 'rack-cabinet.glb']);
+  if (key === 'switch' || key === 'patchpanel') return unique([...defaultNames, 'Panel-middle.glb', 'Panel-normal.glb', 'block-small.glb', 'block-normal.glb']);
+  return unique([...defaultNames, 'Panel-normal.glb', 'Panel-middle.glb', 'block-normal.glb', 'block-small.glb']);
 };
 
 const buildAssetUrls = (assetLibraryPath: string, currentSiteUrl: string | undefined, asset: IModelAsset | undefined): string[] => {
@@ -85,11 +85,69 @@ const yForDevice = (rack: IRack, device: IDevice): number => {
 const heightForDevice = (rack: IRack, device: IDevice): number => Math.max((rackHeight / rack.RackHeightU) * device.UHeight, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
-  const base = device.RackSide === 'Rear' ? rackDepth / 2 + deviceDepth / 2 : -rackDepth / 2 - deviceDepth / 2;
-  const emphasis = selected ? 0.2 : 0;
-  return device.RackSide === 'Rear' ? base + emphasis : base - emphasis;
+  const inset = 0.06;
+  const base = device.RackSide === 'Rear' ? rackDepth / 2 - deviceDepth / 2 - inset : -rackDepth / 2 + deviceDepth / 2 + inset;
+  const emphasis = selected ? 0.04 : 0;
+  return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
 };
 
+const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number => rackZPosition + (rackSide === 'Rear' ? 4.4 : -4.4);
+
+const activeRackSide = (devices: IDevice[]): 'Front' | 'Rear' => devices.some((device) => device.RackSide === 'Rear') && !devices.some((device) => device.RackSide === 'Front') ? 'Rear' : 'Front';
+
+
+const normalizeObjectToBox = (object: THREE.Object3D, targetWidth: number, targetHeight: number, targetDepth: number): void => {
+  const sourceBox = new THREE.Box3().setFromObject(object);
+  const sourceSize = sourceBox.getSize(new THREE.Vector3());
+  const safeSize = new THREE.Vector3(Math.max(sourceSize.x, 0.001), Math.max(sourceSize.y, 0.001), Math.max(sourceSize.z, 0.001));
+  object.scale.multiply(new THREE.Vector3(targetWidth / safeSize.x, targetHeight / safeSize.y, targetDepth / safeSize.z));
+  const scaledBox = new THREE.Box3().setFromObject(object);
+  const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
+  object.position.sub(scaledCenter);
+};
+
+const tintObject = (object: THREE.Object3D, color: number, selected: boolean): void => {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    const material = mesh.material as THREE.MeshStandardMaterial;
+    if (material && material.color) {
+      const cloned = material.clone();
+      cloned.color.lerp(new THREE.Color(color), selected ? 0.55 : 0.28);
+      cloned.emissive = new THREE.Color(selected ? color : 0x000000);
+      cloned.emissiveIntensity = selected ? 0.22 : 0;
+      mesh.material = cloned;
+    }
+  });
+};
+
+const createSplineBackground = (): THREE.CanvasTexture | undefined => {
+  if (typeof document === 'undefined') return undefined;
+  const canvas = document.createElement('canvas');
+  canvas.width = 2;
+  canvas.height = 256;
+  const context = canvas.getContext('2d');
+  if (!context) return undefined;
+  const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, '#dcc1c1');
+  gradient.addColorStop(0.45, '#cdb5b7');
+  gradient.addColorStop(1, '#1d2930');
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.magFilter = THREE.LinearFilter;
+  texture.minFilter = THREE.LinearFilter;
+  return texture;
+};
+
+const createModelWrapper = (object: THREE.Object3D, userData: { [key: string]: string }): THREE.Group => {
+  const wrapper = new THREE.Group();
+  wrapper.userData = userData;
+  wrapper.add(object);
+  return wrapper;
+};
 const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => {
   const group = new THREE.Group();
   const frameMaterial = new THREE.MeshStandardMaterial({ color: selected ? 0x6bdcff : 0x22364b, transparent: true, opacity: 0.72, metalness: 0.35, roughness: 0.45 });
@@ -133,6 +191,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.shadowMap.enabled = true;
     } catch (error) {
       onSceneUnavailable('3D rendering is unavailable in this browser, so the 2D rack fallback is shown.');
       return undefined;
@@ -140,27 +199,35 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     const host = hostRef.current;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x07111f);
+    scene.background = createSplineBackground() || new THREE.Color(0xd8bfc0);
+    scene.fog = new THREE.Fog(0xd8bfc0, 7, 20);
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     camera.position.copy(cameraTargetRef.current);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(host.clientWidth || 900, host.clientHeight || 560);
     host.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xddeeff, 0x0b1020, 1.9));
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    scene.add(new THREE.HemisphereLight(0xfff1ef, 0x29383b, 1.85));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.65);
+    keyLight.castShadow = true;
     keyLight.position.set(4, 7, 5);
     scene.add(keyLight);
-    const fillLight = new THREE.DirectionalLight(0x6bdcff, 0.55);
+    const fillLight = new THREE.DirectionalLight(0xff8f99, 0.42);
     fillLight.position.set(-5, 4, -3);
     scene.add(fillLight);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), new THREE.MeshStandardMaterial({ color: 0x071827, roughness: 0.9 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshStandardMaterial({ color: 0xd2bcbc, roughness: 0.82, metalness: 0.04 }));
+    floor.receiveShadow = true;
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -rackHeight / 2 - 0.04;
     scene.add(floor);
-    const grid = new THREE.GridHelper(12, 12, 0x315270, 0x183049);
+    const grid = new THREE.GridHelper(18, 36, 0xef7777, 0x8f8f92);
     grid.position.y = floor.position.y + 0.01;
     scene.add(grid);
+    const fineGrid = new THREE.GridHelper(18, 72, 0x6bb6ff, 0xb79fa1);
+    fineGrid.material.opacity = 0.26;
+    fineGrid.material.transparent = true;
+    fineGrid.position.y = floor.position.y + 0.012;
+    scene.add(fineGrid);
 
     const loader = new GLTFLoader();
     const assetCache: { [key: string]: THREE.Object3D | undefined } = {};
@@ -201,9 +268,10 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
       loadAsset(rack.ModelAssetKey, (object) => {
         primitiveRack.visible = false;
-        object.scale.set(1, rackHeight, 1);
-        object.userData = { type: 'rack', rackKey: rack.RackKey };
-        rackGroup.add(object);
+        normalizeObjectToBox(object, rackWidth, rackHeight, rackDepth);
+        tintObject(object, rackSelected ? 0x6bdcff : 0x7fd7ff, rackSelected);
+        const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
+        rackGroup.add(rackModel);
       });
 
       devices.filter((device) => device.RackKey === rack.RackKey).forEach((device) => {
@@ -213,12 +281,13 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           const width = widthForMount(device.MountWidth) - 0.03;
-          object.position.copy(primitiveDevice.position);
-          object.scale.set(width, heightForDevice(rack, device), deviceDepth);
-          object.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
+          normalizeObjectToBox(object, width, heightForDevice(rack, device), deviceDepth);
+          tintObject(object, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
+          const deviceModel = createModelWrapper(object, { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey });
+          deviceModel.position.copy(primitiveDevice.position);
           primitiveDevice.visible = false;
-          rackGroup.add(object);
-          deviceObjectsRef.current[device.DeviceKey] = object;
+          rackGroup.add(deviceModel);
+          deviceObjectsRef.current[device.DeviceKey] = deviceModel;
         });
       });
     });
@@ -282,8 +351,9 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const selectedDevice = selectedDeviceKey ? devices.filter((device) => device.DeviceKey === selectedDeviceKey)[0] : undefined;
     const selectedRack = selectedDevice ? racks.filter((rack) => rack.RackKey === selectedDevice.RackKey)[0] : selectedRackKey ? racks.filter((rack) => rack.RackKey === selectedRackKey)[0] : undefined;
     if (!selectedRack) return;
+    const rackSide = selectedDevice ? selectedDevice.RackSide : activeRackSide(devices);
     const rackPosition = new THREE.Vector3(selectedRack.XPosition, 0, selectedRack.ZPosition);
-    cameraTargetRef.current = new THREE.Vector3(selectedRack.XPosition, 1.7, selectedRack.ZPosition + 4.4);
+    cameraTargetRef.current = new THREE.Vector3(selectedRack.XPosition, 1.65, sideCameraZ(selectedRack.ZPosition, rackSide));
     lookAtTargetRef.current = rackPosition;
   }, [racks, devices, selectedRackKey, selectedDeviceKey]);
 
