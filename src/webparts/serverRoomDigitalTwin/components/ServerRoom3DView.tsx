@@ -91,10 +91,6 @@ const zForSide = (device: IDevice, selected: boolean): number => {
   return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
 };
 
-const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number => rackZPosition + (rackSide === 'Rear' ? 4.4 : -4.4);
-
-const activeRackSide = (devices: IDevice[]): 'Front' | 'Rear' => devices.some((device) => device.RackSide === 'Rear') && !devices.some((device) => device.RackSide === 'Front') ? 'Rear' : 'Front';
-
 
 const normalizeObjectToBox = (object: THREE.Object3D, targetWidth: number, targetHeight: number, targetDepth: number): void => {
   const sourceBox = new THREE.Box3().setFromObject(object);
@@ -121,32 +117,6 @@ const tintObject = (object: THREE.Object3D, color: number, selected: boolean): v
       mesh.material = cloned;
     }
   });
-};
-
-const createSplineBackground = (): THREE.CanvasTexture | undefined => {
-  if (typeof document === 'undefined') return undefined;
-  const canvas = document.createElement('canvas');
-  canvas.width = 2;
-  canvas.height = 256;
-  const context = canvas.getContext('2d');
-  if (!context) return undefined;
-  const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, '#dcc1c1');
-  gradient.addColorStop(0.45, '#cdb5b7');
-  gradient.addColorStop(1, '#1d2930');
-  context.fillStyle = gradient;
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.magFilter = THREE.LinearFilter;
-  texture.minFilter = THREE.LinearFilter;
-  return texture;
-};
-
-const createModelWrapper = (object: THREE.Object3D, userData: { [key: string]: string }): THREE.Group => {
-  const wrapper = new THREE.Group();
-  wrapper.userData = userData;
-  wrapper.add(object);
-  return wrapper;
 };
 const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => {
   const group = new THREE.Group();
@@ -215,7 +185,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const fillLight = new THREE.DirectionalLight(0xff8f99, 0.42);
     fillLight.position.set(-5, 4, -3);
     scene.add(fillLight);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshStandardMaterial({ color: 0xd2bcbc, roughness: 0.82, metalness: 0.04 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), new THREE.MeshStandardMaterial({ color: 0x071827, roughness: 0.9, metalness: 0.15 }));
     floor.receiveShadow = true;
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -rackHeight / 2 - 0.04;
@@ -270,8 +240,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         primitiveRack.visible = false;
         normalizeObjectToBox(object, rackWidth, rackHeight, rackDepth);
         tintObject(object, rackSelected ? 0x6bdcff : 0x7fd7ff, rackSelected);
-        const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
-        rackGroup.add(rackModel);
+        object.userData = { type: 'rack', rackKey: rack.RackKey };
+        rackGroup.add(object);
       });
 
       devices.filter((device) => device.RackKey === rack.RackKey).forEach((device) => {
@@ -282,9 +252,9 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         loadAsset(device.ModelAssetKey, (object) => {
           const width = widthForMount(device.MountWidth) - 0.03;
           normalizeObjectToBox(object, width, heightForDevice(rack, device), deviceDepth);
+          object.position.copy(primitiveDevice.position);
           tintObject(object, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
-          const deviceModel = createModelWrapper(object, { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey });
-          deviceModel.position.copy(primitiveDevice.position);
+          object.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
           primitiveDevice.visible = false;
           rackGroup.add(deviceModel);
           deviceObjectsRef.current[device.DeviceKey] = deviceModel;
