@@ -6,9 +6,165 @@ body,
 }
 
 body {
-  background: #04070d;
+  background: #eee9e9;
 }
 
 * {
   box-sizing: border-box;
+}
+
+.previewFallback {
+  background: radial-gradient(circle at 20% 15%, #fff, #eee9e9 44%, #d5c9cb 100%);
+  color: #17202a;
+  display: grid;
+  font-family: 'Segoe UI', sans-serif;
+  gap: 28px;
+  grid-template-columns: minmax(280px, 420px) minmax(360px, 1fr);
+  min-height: 680px;
+  overflow: hidden;
+  padding: 48px;
+}
+
+.fallbackCopy {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+
+.previewFallback strong {
+  color: #8b3f94;
+  font-size: 13px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.previewFallback h1 {
+  font-size: 42px;
+  line-height: 1;
+  margin: 0;
+}
+
+.previewFallback p {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 760px;
+}
+
+.fallbackScene {
+  align-items: center;
+  display: flex;
+  gap: 44px;
+  justify-content: center;
+  min-height: 560px;
+  perspective: 1100px;
+  position: relative;
+}
+
+.fallbackScene::before {
+  background-image: linear-gradient(rgba(110, 110, 120, .26) 1px, transparent 1px), linear-gradient(90deg, rgba(110, 110, 120, .26) 1px, transparent 1px);
+  background-size: 34px 34px;
+  bottom: -160px;
+  content: '';
+  height: 520px;
+  left: -20%;
+  position: absolute;
+  right: -20%;
+  transform: rotateX(67deg);
+  transform-origin: center bottom;
+}
+
+.fallbackRack {
+  background: linear-gradient(90deg, #666a64 0 8%, rgba(210, 214, 211, .62) 8% 86%, #4c4d50 86% 100%);
+  border: 9px solid #696969;
+  border-bottom-width: 14px;
+  box-shadow: 24px 30px 42px rgba(45, 34, 38, .24);
+  height: 430px;
+  position: relative;
+  transform: rotateY(-18deg) rotateX(2deg);
+  transform-style: preserve-3d;
+  width: 170px;
+}
+
+.fallbackRack::after {
+  background: linear-gradient(135deg, rgba(210, 116, 210, .72), rgba(80, 130, 104, .72));
+  content: '';
+  height: calc(100% + 18px);
+  position: absolute;
+  right: -54px;
+  top: -9px;
+  transform: skewY(4deg);
+  width: 54px;
+}
+
+.fallbackRack i,
+.fallbackRack b,
+.fallbackRack span,
+.fallbackRack em {
+  border-radius: 3px;
+  display: block;
+  left: 22px;
+  position: absolute;
+  right: 18px;
+}
+
+.fallbackRack i { background: #d60016; height: 58px; top: 44px; }
+.fallbackRack b { background: #e7ce00; height: 70px; top: 184px; }
+.fallbackRack span { background: #04c900; height: 74px; bottom: 18px; }
+.fallbackRack em { background: #c61abe; height: 190px; top: 42px; }
+
+.fallbackRackBack { opacity: .72; transform: translateX(70px) translateZ(-260px) rotateY(-18deg); }
+.fallbackRackMiddle { opacity: .88; transform: translateX(20px) translateZ(-120px) rotateY(-18deg); }
+.fallbackRackFront { transform: translateX(-28px) translateZ(30px) rotateY(-18deg); }
+.fallbackRackFront i, .fallbackRackFront b { display: none; }
+.fallbackRackFront span { height: 76px; }
+
+#app-root {
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .previewFallback { grid-template-columns: 1fr; padding: 28px; }
+  .fallbackScene { transform: scale(.78); transform-origin: top center; }
+}
+
+body:not(.previewReady)::before {
+  background: rgba(255, 255, 255, .86);
+  border: 1px solid rgba(139, 63, 148, .28);
+  border-radius: 22px;
+  box-shadow: 0 24px 80px rgba(38, 28, 35, .18);
+  color: #17202a;
+  content: 'Serverroom Twin Preview\A Rack Room Digital Twin lädt – sichtbare Sicherheitsansicht';
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  left: 42px;
+  line-height: 1.45;
+  padding: 22px 26px;
+  position: fixed;
+  top: 42px;
+  white-space: pre-line;
+  z-index: 2147483646;
+}
+
+body:not(.previewReady)::after {
+  background:
+    linear-gradient(90deg, #666a64 0 7%, rgba(220, 224, 222, .7) 7% 84%, #55565e 84% 100%),
+    linear-gradient(#d60016 0 0) 28px 58px / 118px 58px no-repeat,
+    linear-gradient(#e7ce00 0 0) 28px 184px / 118px 70px no-repeat,
+    linear-gradient(#04c900 0 0) 28px 326px / 118px 74px no-repeat;
+  border: 9px solid #696969;
+  border-bottom-width: 14px;
+  box-shadow: 28px 34px 60px rgba(45, 34, 38, .22);
+  content: '';
+  height: 430px;
+  position: fixed;
+  right: 18%;
+  top: 18%;
+  transform: rotateY(-18deg) rotateX(2deg);
+  width: 170px;
+  z-index: 2147483645;
 }

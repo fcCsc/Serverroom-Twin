@@ -8,7 +8,21 @@
   </head>
   <body>
     <noscript>Enable JavaScript to view the Server Room Digital Twin preview.</noscript>
-    <div id="root"></div>
+    <div id="root">
+      <section id="preview-fallback" class="previewFallback">
+        <div class="fallbackCopy">
+          <strong>Serverroom Twin Preview</strong>
+          <h1>Rack Room Digital Twin</h1>
+          <p>Statische Sicherheitsansicht: Diese Rack-Vorschau bleibt sichtbar, auch wenn GitHub Pages das JavaScript oder die 3D-GLB-Szene nicht startet.</p>
+        </div>
+        <div class="fallbackScene" aria-label="Static rack room preview">
+          <div class="fallbackRack fallbackRackBack"><i></i><b></b><span></span><em></em></div>
+          <div class="fallbackRack fallbackRackMiddle"><i></i><b></b><span></span><em></em></div>
+          <div class="fallbackRack fallbackRackFront"><i></i><b></b><span></span><em></em></div>
+        </div>
+      </section>
+      <div id="app-root"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
