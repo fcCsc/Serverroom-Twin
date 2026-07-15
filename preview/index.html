@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="de">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -7,8 +7,58 @@
     <title>Server Room Digital Twin Preview</title>
   </head>
   <body>
-    <noscript>Enable JavaScript to view the Server Room Digital Twin preview.</noscript>
-    <div id="root"></div>
+    <noscript>JavaScript ist deaktiviert. Die statische Serverroom-Twin-Vorschau bleibt sichtbar.</noscript>
+    <div id="root">
+      <main class="previewShell">
+        <aside class="sidebar">
+          <div class="brandMark">▣</div>
+          <strong>Serverroom Twin</strong>
+          <nav>
+            <a class="active">Standort</a>
+            <a>Räume</a>
+            <a>Racks</a>
+            <a>Geräte</a>
+            <a>Alarme</a>
+          </nav>
+        </aside>
+        <section class="dashboard">
+          <header class="topbar">
+            <div>
+              <p>Demo Campus / Floor 1 / Room A</p>
+              <h1>Rack Room Digital Twin</h1>
+              <span>Stabile GitHub-Pages Vorschau mit Server-Informationen und Rack-Übersicht.</span>
+            </div>
+            <div class="actions"><button>Front</button><button>Rear</button><button>Inventory</button></div>
+          </header>
+          <section class="metrics" aria-label="Kennzahlen">
+            <article class="metric"><span>Total Devices</span><strong>128</strong><small>Alle Geräte</small></article>
+            <article class="metric"><span>Online</span><strong>112</strong><small>87.5%</small></article>
+            <article class="metric"><span>Warning</span><strong>11</strong><small>8.6%</small></article>
+            <article class="metric"><span>Critical</span><strong>5</strong><small>3.9%</small></article>
+            <article class="metric"><span>Temperatur (Ø)</span><strong>23.4 °C</strong><small>Normal</small></article>
+            <article class="metric"><span>Gesamtleistung</span><strong>18.7 kW</strong><small>34% von 55 kW</small></article>
+          </section>
+          <section class="roomGrid">
+            <div class="scenePanel">
+              <div class="sceneHeader"><div><h2>Raum A</h2><p>Statische Sicherheitsansicht · die Seite bleibt sichtbar, auch wenn JavaScript nicht lädt.</p></div><span>3 racks · Front</span></div>
+              <div class="meshFloor">
+                <div class="rackStage">
+                  <article class="rackCard"><div class="rackBadge"><span></span>Rack A01</div><div class="rackShell"><div class="rackInner"><div class="deviceBlock power" style="flex-grow:2"><span>UPS</span></div><div class="deviceBlock backup" style="flex-grow:2"><span>Backup</span></div><div class="deviceBlock storage" style="flex-grow:3"><span>Storage</span></div><div class="deviceBlock compute" style="flex-grow:4"><span>App Server</span></div><div class="deviceBlock network" style="flex-grow:2"><span>Core Switch</span></div></div></div><div class="rackFooter"><strong>Online</strong><span>Belegung 76%</span></div></article>
+                  <article class="rackCard"><div class="rackBadge"><span></span>Rack A02</div><div class="rackShell"><div class="rackInner"><div class="deviceBlock power" style="flex-grow:2"><span>UPS</span></div><div class="deviceBlock storage" style="flex-grow:4"><span>Storage Array</span></div><div class="deviceBlock compute" style="flex-grow:5"><span>Virtual Host</span></div><div class="deviceBlock security" style="flex-grow:2"><span>Firewall</span></div></div></div><div class="rackFooter"><strong>Online</strong><span>Belegung 68%</span></div></article>
+                  <article class="rackCard"><div class="rackBadge"><span></span>Rack A03</div><div class="rackShell"><div class="rackInner"><div class="deviceBlock power" style="flex-grow:2"><span>UPS</span></div><div class="deviceBlock backup" style="flex-grow:3"><span>Archive</span></div><div class="deviceBlock compute" style="flex-grow:4"><span>Database</span></div><div class="deviceBlock network" style="flex-grow:2"><span>Patch Panel</span></div></div></div><div class="rackFooter"><strong>Warning</strong><span>Belegung 54%</span></div></article>
+                </div>
+              </div>
+              <div class="legend"><span><i class="network"></i> Switch / network</span><span><i class="compute"></i> Server / compute</span><span><i class="storage"></i> Storage</span><span><i class="security"></i> Firewall / security</span><span><i class="power"></i> UPS / power</span></div>
+            </div>
+            <aside class="detailsPanel"><h2>Rack Details</h2><dl><dt>Rack</dt><dd>Rack A01</dd><dt>Location</dt><dd>Demo Campus</dd><dt>Floor</dt><dd>Floor 1</dd><dt>Height</dt><dd>42U</dd><dt>Status</dt><dd class="ok">Online</dd><dt>Temperatur</dt><dd>22.1 °C</dd><dt>Leistung</dt><dd>6.3 kW</dd></dl><button class="primaryAction">Aktionen</button></aside>
+          </section>
+          <section class="inventoryPanel">
+            <div class="panelTitle"><h2>Inventory</h2><span>4 demo devices shown</span></div>
+            <table><thead><tr><th>Device</th><th>Type</th><th>Rack</th><th>Manufacturer</th><th>IP</th><th>Status</th></tr></thead><tbody><tr><td>SW-DEMO-LEFT</td><td>Switch / network</td><td>Rack A01</td><td>Demo Networks</td><td>192.0.2.11</td><td>Online</td></tr><tr><td>SRV-APP-01</td><td>Server / compute</td><td>Rack A01</td><td>Contoso Systems</td><td>192.0.2.21</td><td>Online</td></tr><tr><td>FW-EDGE-01</td><td>Firewall / security</td><td>Rack A02</td><td>Fabrikam Secure</td><td>192.0.2.31</td><td>Online</td></tr><tr><td>NAS-BACKUP-01</td><td>Backup / archive</td><td>Rack A03</td><td>Northwind Storage</td><td>192.0.2.41</td><td>Warning</td></tr></tbody></table>
+          </section>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
