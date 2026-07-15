@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { IDevice, IModelAsset, IRack, MountWidth } from '../models/ServerRoomModels';
 import styles from './ServerRoomDigitalTwin.module.scss';
@@ -302,7 +303,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     let frameId = 0;
     const animate = (): void => {
       camera.position.lerp(cameraTargetRef.current, focusAnimationSpeed);
-      camera.lookAt(lookAtTargetRef.current);
+      controls.target.lerp(lookAtTargetRef.current, focusAnimationSpeed);
+      controls.update();
       renderer.render(scene, camera);
       frameId = window.requestAnimationFrame(animate);
     };
@@ -312,6 +314,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+      controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
     };
