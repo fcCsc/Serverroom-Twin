@@ -6,11 +6,11 @@ import './preview.css';
 ReactDOM.render(
   <React.StrictMode>
     <ServerRoomDigitalTwin
-      description="Static 2D / 2.5D rack elevation MVP preview"
+      description="Interactive 3D server room dashboard preview"
       racksListName="Preview Racks"
       devicesListName="Preview Devices"
       useDummyData={true}
-      enableGlbLoading={false}
+      enableGlbLoading={true}
     />
   </React.StrictMode>,
   document.getElementById('root')
