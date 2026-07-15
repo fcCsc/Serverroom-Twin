@@ -44,11 +44,3 @@ body {
   margin: 0;
   max-width: 760px;
 }
-
-.previewFallbackHidden {
-  display: none;
-}
-
-#app-root {
-  min-height: 100vh;
-}
