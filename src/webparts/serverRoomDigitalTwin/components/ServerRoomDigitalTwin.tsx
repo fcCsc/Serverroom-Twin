@@ -16,7 +16,8 @@ const typeLabels: { [key in DeviceType]: string } = {
   Firewall: 'Firewall / security',
   Storage: 'Storage',
   UPS: 'UPS / power',
-  PatchPanel: 'Patch panel'
+  PatchPanel: 'Patch panel',
+  Backup: 'Backup / archive'
 };
 
 const widthPercent: { [key in MountWidth]: number } = {
@@ -105,7 +106,7 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
             {viewModes.map((mode) => <button key={mode} className={viewMode === mode ? styles.activeToggle : ''} onClick={() => setViewMode(mode)}>{mode === 'Room' ? '3D Room' : 'Rack elevation'}</button>)}
           </div>
           <div className={styles.sideToggle} aria-label="Rack side toggle">
-            {rackSideOptions.map((side) => <button key={side} className={rackSide === side ? styles.activeToggle : ''} onClick={() => setRackSide(side)}>{side}</button>)}
+            {rackSideOptions.map((side) => <button key={side} className={rackSide === side ? styles.activeToggle : ''} onClick={() => { setRackSide(side); setSelectedDeviceKey(undefined); }}>{side}</button>)}
           </div>
           <button onClick={() => setSettingsOpen(!settingsOpen)}>{settingsOpen ? 'Close admin settings' : 'Admin settings'}</button>
         </div>
