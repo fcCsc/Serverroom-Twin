@@ -60,3 +60,64 @@ tbody tr:hover, .selectedRow { background: rgba(107, 220, 255, .09); }
 .fallbackRack { display: none; }
 .fallbackUnits { display: none; }
 .fallbackDevice { display: none; }
+
+.infraDashboard { min-width: 0; }
+.appMain { min-width: 0; }
+.contentGrid { min-width: 0; }
+.primaryCanvas { min-width: 0; }
+.detailsPanel { min-width: 0; }
+.dashboardHeader { min-width: 0; }
+.breadcrumb { min-width: 0; }
+.headerActions { min-width: 0; }
+.avatar { min-width: 0; }
+.deviceBlockPremium { min-width: 0; }
+.conflictDevice { min-width: 0; }
+.deviceMeta { min-width: 0; }
+.deviceBadges { min-width: 0; }
+.deviceTooltip { min-width: 0; }
+.glbVisualizer { min-width: 0; }
+.glbCanvas { min-width: 0; }
+.glbOverlay { min-width: 0; }
+.kpiGrid { min-width: 0; }
+.kpiCard { min-width: 0; }
+.miniMap { min-width: 0; }
+.miniMapSelected { min-width: 0; }
+.rackElevationLarge { min-width: 0; }
+.uScale { min-width: 0; }
+.majorUnit { min-width: 0; }
+.rackCabinet { min-width: 0; }
+.rearPdu { min-width: 0; }
+.backButton { min-width: 0; }
+.focusHeader { min-width: 0; }
+.focusTabs { min-width: 0; }
+.tabActive { min-width: 0; }
+.placeholderPanel { min-width: 0; }
+.rackTile { min-width: 0; }
+.rackTileSelected { min-width: 0; }
+.rackTooltip { min-width: 0; }
+.majorBand { min-width: 0; }
+.deviceDetailActive { min-width: 0; }
+.detailSection { min-width: 0; }
+.settingsIntro { min-width: 0; }
+.mappingGrid { min-width: 0; }
+.modePanel { min-width: 0; }
+.roomHero { min-width: 0; }
+.roomStats { min-width: 0; }
+.roomScene { min-width: 0; }
+.floorGrid { min-width: 0; }
+.roomBottom { min-width: 0; }
+.appSidebar { min-width: 0; }
+.sidebarBrand { min-width: 0; }
+.navActive { min-width: 0; }
+.statusLegend { min-width: 0; }
+.scenePanel { min-width: 0; }
+.sceneWarning { min-width: 0; }
+.focusBar { min-width: 0; }
+.elevationHeader { min-width: 0; }
+.compactElevationGrid { min-width: 0; }
+.scenePanel { background: #f2eeee; border-radius: 22px; min-height: 520px; overflow: hidden; position: relative; }
+.threeHost { display: block; height: 540px; min-height: 420px; width: 100%; }
+.threeHost canvas { display: block; height: 100% !important; width: 100% !important; }
+.focusBar { background: rgba(4,10,18,.78); border-radius: 16px; bottom: 18px; color: #fff; left: 18px; padding: 14px 16px; position: absolute; right: 18px; z-index: 2; }
+.elevationHeader { align-items: center; display: flex; justify-content: space-between; margin: 8px 0 12px; }
+.compactElevationGrid .rackShell { height: 320px; }

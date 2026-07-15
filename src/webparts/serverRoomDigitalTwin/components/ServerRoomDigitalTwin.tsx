@@ -16,7 +16,8 @@ const typeLabels: { [key in DeviceType]: string } = {
   Firewall: 'Firewall / security',
   Storage: 'Storage',
   UPS: 'UPS / power',
-  PatchPanel: 'Patch panel'
+  PatchPanel: 'Patch panel',
+  Backup: 'Backup / archive'
 };
 
 const widthPercent: { [key in MountWidth]: number } = {
