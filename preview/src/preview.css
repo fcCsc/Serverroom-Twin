@@ -6,9 +6,41 @@ body,
 }
 
 body {
-  background: #04070d;
+  background: #f2eeee;
 }
 
 * {
   box-sizing: border-box;
+}
+
+.previewFallback {
+  align-items: flex-start;
+  background: radial-gradient(circle at top left, #fff, #e7d9d8 48%, #c9b9bb);
+  color: #17202a;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Segoe UI', sans-serif;
+  gap: 12px;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 48px;
+}
+
+.previewFallback strong {
+  color: #8b3f94;
+  font-size: 13px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.previewFallback h1 {
+  font-size: 36px;
+  margin: 0;
+}
+
+.previewFallback p {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 760px;
 }
