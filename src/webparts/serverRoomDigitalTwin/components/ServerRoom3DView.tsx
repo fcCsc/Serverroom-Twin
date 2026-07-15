@@ -265,7 +265,13 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    const onPointerDown = (event: PointerEvent): void => {
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragPreviousX = 0;
+    let isDragging = false;
+    let roomRotationTarget = 0;
+
+    const pickSceneObject = (event: PointerEvent): void => {
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -287,7 +293,34 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         }
       }
     };
+
+    const onPointerDown = (event: PointerEvent): void => {
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      dragPreviousX = event.clientX;
+      isDragging = true;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    };
+
+    const onPointerMove = (event: PointerEvent): void => {
+      if (!isDragging) return;
+      const deltaX = event.clientX - dragPreviousX;
+      dragPreviousX = event.clientX;
+      roomRotationTarget += deltaX * 0.006;
+    };
+
+    const onPointerUp = (event: PointerEvent): void => {
+      if (!isDragging) return;
+      isDragging = false;
+      renderer.domElement.releasePointerCapture(event.pointerId);
+      const moved = Math.abs(event.clientX - dragStartX) + Math.abs(event.clientY - dragStartY);
+      if (moved < 6) pickSceneObject(event);
+    };
+
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    renderer.domElement.addEventListener('pointermove', onPointerMove);
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
+    renderer.domElement.addEventListener('pointercancel', onPointerUp);
 
     const onResize = (): void => {
       if (!host) return;
