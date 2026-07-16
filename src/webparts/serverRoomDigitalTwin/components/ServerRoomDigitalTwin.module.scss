@@ -28,18 +28,19 @@ h3 { color: #b9cde4; font-size: 13px; margin: 18px 0 8px; text-transform: upperc
 .selectedRack { border-color: #6bdcff; box-shadow: 0 0 0 2px rgba(107,220,255,.18), 0 18px 44px rgba(0,0,0,.25); }
 .rackShell { display: grid; gap: 8px; grid-template-columns: 42px 1fr; height: 620px; margin-top: 14px; }
 .uLabels { display: grid; font-size: 10px; }
-.uLabels span { align-items: center; border-bottom: 1px solid rgba(255,255,255,.08); color: #8fa8c2; display: flex; justify-content: flex-end; padding-right: 4px; }
-.rackSlots { background: linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border: 2px solid rgba(170,190,210,.42); border-radius: 12px; display: grid; overflow: hidden; position: relative; }
-.rackSlots > span { border-bottom: 1px solid rgba(255,255,255,.08); min-height: 0; }
-.deviceBlock { border: 1px solid rgba(255,255,255,.55); border-radius: 7px; color: #06101b; cursor: pointer; display: flex; flex-direction: column; font-size: 11px; font-weight: 800; justify-content: center; overflow: hidden; padding: 4px 6px; position: absolute; text-align: left; z-index: 1; }
+.uLabels span { align-items: center; border-bottom: 1px solid rgba(182,211,236,.24); color: #b6cce1; display: flex; font-weight: 700; justify-content: flex-end; padding-right: 5px; }
+.rackSlots { background: linear-gradient(90deg, rgba(255,255,255,.09), rgba(255,255,255,.025)); border: 3px solid rgba(170,210,238,.62); border-radius: 12px; display: grid; overflow: hidden; position: relative; }
+.rackSlots > span { border-bottom: 1px solid rgba(183,215,240,.25); min-height: 0; }
+.deviceBlock { border: 2px solid rgba(255,255,255,.7); border-radius: 5px; color: #fff; cursor: pointer; display: flex; flex-direction: column; font-size: 11px; font-weight: 800; justify-content: center; overflow: hidden; padding: 4px 6px; position: absolute; text-align: left; text-shadow: 0 1px 2px rgba(0,0,0,.7); z-index: 1; }
 .deviceBlock span { font-size: 9px; opacity: .8; }
 .selectedDevice { filter: brightness(1.15); outline: 3px solid #fff; transform: translateY(-1px); z-index: 2; }
-.typeSwitch, .typeSwitch i { background: repeating-linear-gradient(135deg, #55b8ff 0, #55b8ff 7px, #2f80c8 7px, #2f80c8 11px); }
-.typeServer, .typeServer i { background: linear-gradient(135deg, #72e0a5, #27a867); }
-.typeFirewall, .typeFirewall i { background: repeating-linear-gradient(45deg, #ffb05a 0, #ffb05a 8px, #dc6d1f 8px, #dc6d1f 12px); }
-.typeStorage, .typeStorage i { background: linear-gradient(135deg, #c084fc, #7c3aed); }
-.typeUPS, .typeUPS i { background: linear-gradient(135deg, #ef6f5e, #7c3f24); }
-.typePatchPanel, .typePatchPanel i { background: repeating-linear-gradient(90deg, #c8d0d8 0, #c8d0d8 5px, #7d8791 5px, #7d8791 7px); }
+.typeBackup, .typeBackup i { background: linear-gradient(135deg, #a855f7, #6b21a8); }
+.typeFirewall, .typeFirewall i { background: linear-gradient(135deg, #ef3340, #a80812); }
+.typeSwitch, .typeSwitch i { background: linear-gradient(135deg, #ffd91a, #c69f00); }
+.typeServer, .typeServer i { background: linear-gradient(135deg, #36d477, #087a39); }
+.typeUPS, .typeUPS i { background: linear-gradient(135deg, #925436, #4d2414); }
+.typeStorage, .typeStorage i { background: linear-gradient(135deg, #3299e8, #075a9b); }
+.typePatchPanel, .typePatchPanel i { background: repeating-linear-gradient(90deg, #515966 0, #515966 5px, #242a32 5px, #242a32 8px); }
 .details { display: grid; grid-template-columns: 130px 1fr; gap: 10px; margin-bottom: 18px; }
 .details dt { color: #8fa8c2; }
 .details dd { margin: 0; overflow-wrap: anywhere; }
@@ -56,7 +57,8 @@ tbody tr:hover, .selectedRow { background: rgba(107, 220, 255, .09); }
 @media (max-width: 1200px) { .workspace { grid-template-columns: 1fr; } .header { align-items: flex-start; flex-direction: column; } .rackShell { height: 520px; } }
 .floorGroup { margin: 0; }
 .scenePanel { background: radial-gradient(circle at 35% 18%, rgba(58,129,173,.32), rgba(4,8,14,.96) 62%); border: 1px solid rgba(107,220,255,.22); border-radius: 22px; box-shadow: inset 0 0 80px rgba(0,0,0,.35); margin: 14px 0 18px; min-height: 520px; overflow: hidden; position: relative; }
-.threeHost { display: block; height: 540px; min-height: 420px; width: 100%; }
+.threeHost { cursor: grab; display: block; height: 640px; min-height: 520px; width: 100%; }
+.threeHost:active { cursor: grabbing; }
 .threeHost canvas { display: block; height: 100% !important; width: 100% !important; }
 .sceneWarning { background: rgba(255,176,90,.14); border: 1px solid rgba(255,176,90,.45); border-radius: 12px; color: #ffd9a8; left: 18px; margin: 0; padding: 10px 12px; position: absolute; top: 18px; z-index: 2; }
 .focusBar { align-items: center; background: rgba(4,10,18,.78); border: 1px solid rgba(107,220,255,.24); border-radius: 16px; bottom: 18px; box-shadow: 0 12px 40px rgba(0,0,0,.32); display: flex; gap: 16px; justify-content: space-between; left: 18px; padding: 14px 16px; position: absolute; right: 18px; z-index: 2; }
