@@ -177,6 +177,7 @@ const createModelWrapper = (object: THREE.Object3D, userData: { [key: string]: s
 };
 const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => {
   const group = new THREE.Group();
+  const rackHeight = rackHeightFor(rack);
   const frameMaterial = new THREE.MeshStandardMaterial({ color: selected ? 0x6bdcff : 0x22364b, transparent: true, opacity: 0.72, metalness: 0.35, roughness: 0.45 });
   const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x081522, transparent: true, opacity: 0.18 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(rackWidth, rackHeight, rackDepth), bodyMaterial);
@@ -297,7 +298,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
-          normalizeObjectToBox(object, rackWidth, rackHeight, rackDepth);
+          normalizeObjectToBox(object, rackWidth, rackHeightFor(rack), rackDepth);
           tintObject(object, rackSelected ? 0x6bdcff : 0x7fd7ff, rackSelected);
           setModelOpacity(object, 0.72);
           const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
@@ -316,7 +317,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         loadAsset(device.ModelAssetKey, (object) => {
           try {
             const width = widthForMount(device.MountWidth) - 0.03;
-            normalizeObjectToBox(object, width, heightForDevice(rack, device), deviceDepth);
+            normalizeObjectToBox(object, width, heightForDevice(device), deviceDepth);
             tintObject(object, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
             const deviceModel = createModelWrapper(object, { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey });
             deviceModel.position.copy(primitiveDevice.position);
@@ -384,8 +385,6 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
-      renderer.domElement.removeEventListener('pointerup', onPointerUp);
-      controls.removeEventListener('start', stopAutomaticFocus);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
