@@ -96,7 +96,7 @@ const zForSide = (device: IDevice, selected: boolean): number => {
   return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
 };
 
-const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number => rackZPosition + (rackSide === 'Rear' ? 5.4 : -5.4);
+const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number => rackZPosition + (rackSide === 'Rear' ? 4.4 : -4.4);
 
 const activeRackSide = (devices: IDevice[]): 'Front' | 'Rear' => devices.some((device) => device.RackSide === 'Rear') && !devices.some((device) => device.RackSide === 'Front') ? 'Rear' : 'Front';
 
@@ -114,37 +114,12 @@ const normalizeObjectToBox = (object: THREE.Object3D, targetWidth: number, targe
 const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
   if (!source) return source;
   const material = source.clone() as THREE.MeshStandardMaterial;
-  if (material.color) material.color.setHex(selected ? 0xffffff : color);
+  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.55 : 0.28);
   if (material.emissive) {
     material.emissive = new THREE.Color(selected ? color : 0x000000);
     material.emissiveIntensity = selected ? 0.22 : 0;
   }
   return material;
-};
-
-const createTextLabel = (text: string, color: number, userData: { [key: string]: string }): THREE.Sprite | undefined => {
-  if (typeof document === 'undefined') return undefined;
-  const canvas = document.createElement('canvas');
-  canvas.width = 640;
-  canvas.height = 112;
-  const context = canvas.getContext('2d');
-  if (!context) return undefined;
-  context.fillStyle = 'rgba(5, 12, 22, .9)';
-  context.strokeStyle = `#${new THREE.Color(color).getHexString()}`;
-  context.lineWidth = 8;
-  context.fillRect(6, 6, canvas.width - 12, canvas.height - 12);
-  context.strokeRect(6, 6, canvas.width - 12, canvas.height - 12);
-  context.fillStyle = '#ffffff';
-  context.font = '700 38px Arial, sans-serif';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(text.length > 28 ? `${text.slice(0, 27)}…` : text, canvas.width / 2, canvas.height / 2);
-  const material = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(canvas), depthTest: false, transparent: true });
-  const sprite = new THREE.Sprite(material);
-  sprite.scale.set(1.05, 0.184, 1);
-  sprite.userData = userData;
-  sprite.renderOrder = 20;
-  return sprite;
 };
 
 const tintObject = (object: THREE.Object3D, color: number, selected: boolean): void => {
@@ -202,7 +177,6 @@ const createModelWrapper = (object: THREE.Object3D, userData: { [key: string]: s
 };
 const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => {
   const group = new THREE.Group();
-  const rackHeight = rackHeightFor(rack);
   const frameMaterial = new THREE.MeshStandardMaterial({ color: selected ? 0x6bdcff : 0x22364b, transparent: true, opacity: 0.72, metalness: 0.35, roughness: 0.45 });
   const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x081522, transparent: true, opacity: 0.18 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(rackWidth, rackHeight, rackDepth), bodyMaterial);
@@ -264,18 +238,11 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
-    controls.dampingFactor = 0.055;
-    controls.rotateSpeed = 0.45;
-    controls.zoomSpeed = 0.65;
-    controls.panSpeed = 0.55;
+    controls.dampingFactor = 0.08;
     controls.enablePan = true;
-    controls.minDistance = 2.1;
-    controls.maxDistance = 14;
-    controls.minPolarAngle = 0.18;
-    controls.maxPolarAngle = Math.PI * 0.76;
+    controls.minDistance = 2.4;
+    controls.maxDistance = 10;
     controls.target.copy(lookAtTargetRef.current);
-    const stopAutomaticFocus = (): void => { focusActiveRef.current = false; };
-    controls.addEventListener('start', stopAutomaticFocus);
 
     scene.add(new THREE.HemisphereLight(0xfff1ef, 0x29383b, 1.85));
     const keyLight = new THREE.DirectionalLight(0xffffff, 1.65);
@@ -285,7 +252,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const fillLight = new THREE.DirectionalLight(0xff8f99, 0.42);
     fillLight.position.set(-5, 4, -3);
     scene.add(fillLight);
-    const floor = new THREE.Mesh(new THREE.CircleGeometry(10, 96), new THREE.MeshStandardMaterial({ color: 0xcab9bb, roughness: 0.9, metalness: 0.02 }));
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshStandardMaterial({ color: 0xd2bcbc, roughness: 0.82, metalness: 0.04 }));
     floor.receiveShadow = true;
     floor.rotation.x = -Math.PI / 2;
     floor.position.y = -standardRackHeight / 2 - 0.04;
@@ -330,14 +297,11 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
-          normalizeObjectToBox(object, rackWidth, rackHeightFor(rack), rackDepth);
-          tintObject(object, rackSelected ? 0x8ce8ff : 0x626773, rackSelected);
-          setModelOpacity(object, rackSelected ? 0.98 : 0.9);
+          normalizeObjectToBox(object, rackWidth, rackHeight, rackDepth);
+          tintObject(object, rackSelected ? 0x6bdcff : 0x7fd7ff, rackSelected);
+          setModelOpacity(object, 0.72);
           const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
-          // Keep the lightweight rack frame as a safety net. Some exported Rack.glb
-          // files contain transparent/one-sided cabinet materials and appeared to
-          // make the complete room vanish as soon as loading finished.
           primitiveRack.visible = true;
         } catch (error) {
           primitiveRack.visible = true;
@@ -352,21 +316,10 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         loadAsset(device.ModelAssetKey, (object) => {
           try {
             const width = widthForMount(device.MountWidth) - 0.03;
-            const deviceModel = new THREE.Group();
-            deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
-            for (let unit = 0; unit < Math.max(1, device.UHeight); unit++) {
-              const unitModel = unit === 0 ? object : cloneObject(object);
-              normalizeObjectToBox(unitModel, width, rackUnitHeight() - deviceGap, deviceDepth);
-              tintObject(unitModel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
-              unitModel.position.y = (unit - (Math.max(1, device.UHeight) - 1) / 2) * rackUnitHeight();
-              deviceModel.add(unitModel);
-            }
+            normalizeObjectToBox(object, width, heightForDevice(rack, device), deviceDepth);
+            tintObject(object, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
+            const deviceModel = createModelWrapper(object, { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey });
             deviceModel.position.copy(primitiveDevice.position);
-            const label = createTextLabel(device.Title, deviceColors[device.DeviceType] || 0x7aa8ff, { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey });
-            if (label) {
-              label.position.set(0, 0, device.RackSide === 'Rear' ? deviceDepth * 0.66 : -deviceDepth * 0.66);
-              deviceModel.add(label);
-            }
             rackGroup.add(deviceModel);
             deviceObjectsRef.current[device.DeviceKey] = deviceModel;
             primitiveDevice.visible = false;
@@ -379,14 +332,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    let pointerDownX = 0;
-    let pointerDownY = 0;
     const onPointerDown = (event: PointerEvent): void => {
-      pointerDownX = event.clientX;
-      pointerDownY = event.clientY;
-    };
-    const onPointerUp = (event: PointerEvent): void => {
-      if (Math.abs(event.clientX - pointerDownX) + Math.abs(event.clientY - pointerDownY) > 5) return;
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -409,7 +355,6 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       }
     };
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
-    renderer.domElement.addEventListener('pointerup', onPointerUp);
 
     const onResize = (): void => {
       if (!host) return;
