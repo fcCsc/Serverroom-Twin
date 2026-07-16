@@ -21,17 +21,19 @@ interface IServerRoom3DViewProps {
 
 const rackWidth = 1.2;
 const rackDepth = 1.1;
-const rackHeight = 3.4;
+const standardRackHeight = 4.2;
+const standardRackUnits = 42;
 const deviceDepth = 0.24;
-const focusAnimationSpeed = 0.08;
+const deviceGap = 0.008;
 
 const deviceColors: { [key: string]: number } = {
-  Server: 0x59b6ff,
-  Switch: 0x62e6bd,
-  Storage: 0xb692ff,
-  Firewall: 0xff9f6e,
-  UPS: 0xf6d365,
-  PatchPanel: 0xd7e3f4
+  Backup: 0x8b3fd6,
+  Firewall: 0xd71920,
+  Switch: 0xf2c300,
+  Server: 0x20b15a,
+  UPS: 0x713b22,
+  Storage: 0x1677c8,
+  PatchPanel: 0x343b46
 };
 
 const slotCountByMountWidth: { [key in MountWidth]: number } = {
@@ -69,6 +71,8 @@ const buildAssetUrls = (assetLibraryPath: string, currentSiteUrl: string | undef
 };
 
 const widthForMount = (mountWidth: MountWidth): number => rackWidth / slotCountByMountWidth[mountWidth];
+const rackHeightFor = (rack: IRack): number => standardRackHeight * Math.max(1, rack.RackHeightU) / standardRackUnits;
+const rackUnitHeight = (): number => standardRackHeight / standardRackUnits;
 
 const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
   const slots = slotCountByMountWidth[mountWidth];
@@ -78,12 +82,12 @@ const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
 };
 
 const yForDevice = (rack: IRack, device: IDevice): number => {
-  const unitHeight = rackHeight / rack.RackHeightU;
+  const unitHeight = rackUnitHeight();
   const centerU = device.UPosition + device.UHeight / 2 - 1;
-  return -rackHeight / 2 + centerU * unitHeight;
+  return -rackHeightFor(rack) / 2 + centerU * unitHeight;
 };
 
-const heightForDevice = (rack: IRack, device: IDevice): number => Math.max((rackHeight / rack.RackHeightU) * device.UHeight, 0.045);
+const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
   const inset = 0.06;
@@ -192,7 +196,7 @@ const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => 
 
 const createPrimitiveDevice = (rack: IRack, device: IDevice, selected: boolean): THREE.Object3D => {
   const width = widthForMount(device.MountWidth) - 0.03;
-  const height = heightForDevice(rack, device) - 0.01;
+  const height = heightForDevice(device) - deviceGap;
   const color = deviceColors[device.DeviceType] || 0x7aa8ff;
   const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: selected ? color : 0x000000, emissiveIntensity: selected ? 0.22 : 0, metalness: 0.25, roughness: 0.5 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, deviceDepth), material);
@@ -205,8 +209,9 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
   const hostRef = React.useRef<HTMLDivElement | null>(null);
   const rackObjectsRef = React.useRef<{ [key: string]: THREE.Object3D }>({});
   const deviceObjectsRef = React.useRef<{ [key: string]: THREE.Object3D }>({});
-  const cameraTargetRef = React.useRef<THREE.Vector3>(new THREE.Vector3(0, 2.5, 6));
+  const cameraTargetRef = React.useRef<THREE.Vector3>(new THREE.Vector3(0, 1.2, -7.2));
   const lookAtTargetRef = React.useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+  const focusActiveRef = React.useRef<boolean>(true);
 
   React.useEffect(() => {
     if (!hostRef.current) return undefined;
@@ -250,16 +255,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshStandardMaterial({ color: 0xd2bcbc, roughness: 0.82, metalness: 0.04 }));
     floor.receiveShadow = true;
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -rackHeight / 2 - 0.04;
+    floor.position.y = -standardRackHeight / 2 - 0.04;
     scene.add(floor);
-    const grid = new THREE.GridHelper(18, 36, 0xef7777, 0x8f8f92);
-    grid.position.y = floor.position.y + 0.01;
-    scene.add(grid);
-    const fineGrid = new THREE.GridHelper(18, 72, 0x6bb6ff, 0xb79fa1);
-    fineGrid.material.opacity = 0.26;
-    fineGrid.material.transparent = true;
-    fineGrid.position.y = floor.position.y + 0.012;
-    scene.add(fineGrid);
 
     const loader = new GLTFLoader();
     const assetCache: { [key: string]: THREE.Object3D | undefined } = {};
@@ -290,7 +287,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     racks.forEach((rack) => {
       const rackSelected = selectedRackKey === rack.RackKey && !selectedDeviceKey;
       const rackGroup = new THREE.Group();
-      rackGroup.position.set(rack.XPosition, 0, rack.ZPosition);
+      rackGroup.position.set(rack.XPosition, (rackHeightFor(rack) - standardRackHeight) / 2, rack.ZPosition);
       rackGroup.rotation.y = THREE.MathUtils.degToRad(rack.Rotation);
       rackGroup.userData = { type: 'rack', rackKey: rack.RackKey };
       const primitiveRack = createPrimitiveRack(rack, rackSelected);
@@ -372,8 +369,11 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     let frameId = 0;
     const animate = (): void => {
-      camera.position.lerp(cameraTargetRef.current, focusAnimationSpeed);
-      controls.target.lerp(lookAtTargetRef.current, focusAnimationSpeed);
+      if (focusActiveRef.current) {
+        camera.position.lerp(cameraTargetRef.current, 0.055);
+        controls.target.lerp(lookAtTargetRef.current, 0.055);
+        if (camera.position.distanceTo(cameraTargetRef.current) < 0.015 && controls.target.distanceTo(lookAtTargetRef.current) < 0.015) focusActiveRef.current = false;
+      }
       controls.update();
       renderer.render(scene, camera);
       frameId = window.requestAnimationFrame(animate);
@@ -384,6 +384,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+      renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      controls.removeEventListener('start', stopAutomaticFocus);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
@@ -395,9 +397,11 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const selectedRack = selectedDevice ? racks.filter((rack) => rack.RackKey === selectedDevice.RackKey)[0] : selectedRackKey ? racks.filter((rack) => rack.RackKey === selectedRackKey)[0] : undefined;
     if (!selectedRack) return;
     const rackSide = selectedDevice ? selectedDevice.RackSide : activeRackSide(devices);
-    const rackPosition = new THREE.Vector3(selectedRack.XPosition, 0, selectedRack.ZPosition);
-    cameraTargetRef.current = new THREE.Vector3(selectedRack.XPosition, 1.65, sideCameraZ(selectedRack.ZPosition, rackSide));
+    const rackCenterY = (rackHeightFor(selectedRack) - standardRackHeight) / 2;
+    const rackPosition = new THREE.Vector3(selectedRack.XPosition, rackCenterY, selectedRack.ZPosition);
+    cameraTargetRef.current = new THREE.Vector3(selectedRack.XPosition, rackCenterY + rackHeightFor(selectedRack) * 0.32, sideCameraZ(selectedRack.ZPosition, rackSide));
     lookAtTargetRef.current = rackPosition;
+    focusActiveRef.current = true;
   }, [racks, devices, selectedRackKey, selectedDeviceKey]);
 
   return <div className={styles.threeHost} ref={hostRef} aria-label="3D server room view" />;
