@@ -8,7 +8,7 @@ import { IServerRoomDigitalTwinProps } from './IServerRoomDigitalTwinProps';
 const rackSideOptions: RackSide[] = ['Front', 'Rear'];
 type ViewMode = 'Room' | 'Elevation';
 const viewModes: ViewMode[] = ['Room', 'Elevation'];
-const deviceTypes: DeviceType[] = ['Switch', 'Server', 'Firewall', 'Storage', 'UPS', 'PatchPanel'];
+const deviceTypes: DeviceType[] = ['Backup', 'Firewall', 'Switch', 'Server', 'UPS', 'Storage', 'PatchPanel'];
 
 const typeLabels: { [key in DeviceType]: string } = {
   Switch: 'Switch / network',
@@ -72,6 +72,7 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
   const selectedDevice = selectedDeviceKey ? devices.filter((device) => device.DeviceKey === selectedDeviceKey)[0] : undefined;
   const areaDevices = devices.filter((device) => visibleRacks.some((rack) => rack.RackKey === device.RackKey));
   const sideDevices = areaDevices.filter((device) => device.RackSide === rackSide);
+  const selectedRackDevices = sideDevices.filter((device) => device.RackKey === selectedRackKey);
   const effectiveAssetLibraryPath = assetLibraryPath || (currentSiteUrl ? defaultAssetLibraryPath : 'assets/glb');
   const glbLoadingEnabled = enableGlbLoading !== false;
 
@@ -158,13 +159,15 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
             </div>
           )}
 
-          <div className={styles.elevationHeader}>
-            <h2>{viewMode === 'Room' ? 'Rack elevation fallback' : 'Rack elevation navigator'}</h2>
-            <span>U-accurate placement • {rackSide} view</span>
-          </div>
-          <div className={`${styles.elevationGrid} ${viewMode === 'Room' ? styles.compactElevationGrid : ''}`}>
-            {visibleRacks.map((rack) => <RackElevation key={rack.RackKey} rack={rack} devices={sideDevices.filter((device) => device.RackKey === rack.RackKey)} rackSide={rackSide} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackSelected} onDeviceSelected={onDeviceSelected} />)}
-          </div>
+          {viewMode === 'Elevation' && <React.Fragment>
+            <div className={styles.elevationHeader}>
+              <h2>Rack elevation navigator</h2>
+              <span>U-accurate placement • {rackSide} view</span>
+            </div>
+            <div className={styles.elevationGrid}>
+              {visibleRacks.map((rack) => <RackElevation key={rack.RackKey} rack={rack} devices={sideDevices.filter((device) => device.RackKey === rack.RackKey)} rackSide={rackSide} selectedRackKey={selectedRackKey} selectedDeviceKey={selectedDeviceKey} onRackSelected={onRackSelected} onDeviceSelected={onDeviceSelected} />)}
+            </div>
+          </React.Fragment>}
         </main>
 
         <aside className={styles.detailPanel}>
@@ -177,9 +180,9 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
       </div>
 
       <footer className={styles.tablePanel}>
-        <div className={styles.inventoryHeader}><h2>Inventory</h2><span>{sideDevices.length} dummy devices shown for {selectedLocation} / {selectedFloor} / {rackSide}</span></div>
+        <div className={styles.inventoryHeader}><h2>Inventory • {selectedRack ? selectedRack.Title : 'No rack selected'}</h2><span>{selectedRackDevices.length} devices • {rackSide} side</span></div>
         <table><thead><tr><th>Device</th><th>Type</th><th>Rack</th>{visibleColumns.manufacturer && <th>Manufacturer</th>}{visibleColumns.model && <th>Model</th>}{visibleColumns.ip && <th>IP</th>}{visibleColumns.vlan && <th>VLAN</th>}{visibleColumns.serial && <th>Serial</th>}{visibleColumns.warranty && <th>Warranty</th>}{visibleColumns.maintenance && <th>Maintenance responsible</th>}</tr></thead><tbody>
-          {sideDevices.map((device) => {
+          {selectedRackDevices.map((device) => {
             const rack = racks.filter((candidate) => candidate.RackKey === device.RackKey)[0];
             return <tr key={device.DeviceKey} className={selectedDeviceKey === device.DeviceKey ? styles.selectedRow : ''} onClick={() => onDeviceSelected(device)}><td>{device.Title}</td><td>{typeLabels[device.DeviceType]}</td><td>{rack ? rack.Title : device.RackKey}</td>{visibleColumns.manufacturer && <td>{device.Manufacturer}</td>}{visibleColumns.model && <td>{device.Model}</td>}{visibleColumns.ip && <td>{device.IPAddress}</td>}{visibleColumns.vlan && <td>{device.VLAN}</td>}{visibleColumns.serial && <td>{device.SerialNumber}</td>}{visibleColumns.warranty && <td>{device.WarrantyExpiry}</td>}{visibleColumns.maintenance && <td>{device.MaintenanceResponsible}</td>}</tr>;
           })}
@@ -194,7 +197,7 @@ const RackElevation: React.FC<{ rack: IRack; devices: IDevice[]; rackSide: RackS
   return (
     <article className={`${styles.elevationCard} ${selectedRackKey === rack.RackKey ? styles.selectedRack : ''}`} onClick={() => onRackSelected(rack.RackKey)}>
       <div className={styles.rackTop}><strong>{rack.Title}</strong><span>{rack.RackHeightU}U</span></div>
-      <div className={styles.rackShell} style={{ gridTemplateRows: `repeat(${rack.RackHeightU}, minmax(10px, 1fr))` }}>
+      <div className={styles.rackShell} style={{ gridTemplateRows: `repeat(${rack.RackHeightU}, minmax(10px, 1fr))`, height: `${Math.max(260, Math.round(620 * rack.RackHeightU / 42))}px` }}>
         <div className={styles.uLabels}>{units.map((unit) => <span key={unit}>U{unit}</span>)}</div>
         <div className={styles.rackSlots}>{units.map((unit) => <span key={unit} />)}{devices.map((device) => {
           const height = getDeviceHeight(device);
