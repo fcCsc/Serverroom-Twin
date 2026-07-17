@@ -19,10 +19,11 @@ interface IServerRoom3DViewProps {
   onSceneUnavailable: (message: string) => void;
 }
 
-// Rack.glb is a native 42U cabinet. These dimensions mirror the asset instead
-// of stretching it into the dimensions of the old generated rack.
-const rackWidth = 1.1587;
-const rackDepth = 1.4274;
+// Rack.glb is authored side-on. After turning it 90 degrees its original depth
+// is the visible rack width and its original width is the room depth.
+const rackModelRotationY = Math.PI / 2;
+const rackWidth = 1.4274;
+const rackDepth = 1.1587;
 const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
 const deviceDepth = 0.24;
@@ -80,8 +81,8 @@ const rackUnitHeight = (): number => standardRackHeight / standardRackUnits;
 const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
   const slots = slotCountByMountWidth[mountWidth];
   const slot = Math.max(1, Math.min(horizontalSlot, slots));
-  const segment = rackWidth / slots;
-  return -rackWidth / 2 + segment / 2 + (slot - 1) * segment;
+  const segment = rackInteriorWidth / slots;
+  return -rackInteriorWidth / 2 + segment / 2 + (slot - 1) * segment;
 };
 
 const yForDevice = (rack: IRack, device: IDevice): number => {
@@ -292,8 +293,10 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
-          // Rack.glb already contains the correctly proportioned 42U cabinet.
-          // Re-centering does not alter its authored scale or materials.
+          // Face the cabinet openings towards the front/rear device planes.
+          // Device positions deliberately remain independent of this model
+          // correction, so front and rear panels may share the same U level.
+          object.rotation.y = rackModelRotationY;
           centerObject(object);
           const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
