@@ -21,10 +21,8 @@ interface IServerRoom3DViewProps {
 
 // Rack.glb is a native 42U cabinet. These dimensions mirror the asset instead
 // of stretching it into the dimensions of the old generated rack.
-// Rack.glb is authored sideways relative to the room coordinate system. Once
-// rotated below, its original Z span is the front width and X span the depth.
-const rackWidth = 1.4274;
-const rackDepth = 1.1587;
+const rackWidth = 1.1587;
+const rackDepth = 1.4274;
 const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
 const deviceDepth = 0.24;
@@ -295,9 +293,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
           // Rack.glb already contains the correctly proportioned 42U cabinet.
-          // Its local front is on the X axis, so turn it into the room's Z-facing
-          // convention before centering it around the device placements.
-          object.rotation.y = -Math.PI / 2;
+          // Re-centering does not alter its authored scale or materials.
           centerObject(object);
           const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
