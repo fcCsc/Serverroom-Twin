@@ -19,12 +19,17 @@ interface IServerRoom3DViewProps {
   onSceneUnavailable: (message: string) => void;
 }
 
-const rackWidth = 1.2;
-const rackDepth = 1.1;
-const standardRackHeight = 4.2;
+// Rack.glb is a native 42U cabinet. These dimensions mirror the asset instead
+// of stretching it into the dimensions of the old generated rack.
+// Rack.glb needs a half-turn so its open front/rear faces align with the room.
+// A 180° turn keeps the authored X width and Z depth unchanged.
+const rackWidth = 1.1587;
+const rackDepth = 1.4274;
+const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
 const deviceDepth = 0.24;
 const deviceGap = 0.008;
+const rackInteriorWidth = rackWidth * 0.88;
 
 const deviceColors: { [key: string]: number } = {
   Backup: 0x8b3fd6,
@@ -101,14 +106,20 @@ const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number 
 const activeRackSide = (devices: IDevice[]): 'Front' | 'Rear' => devices.some((device) => device.RackSide === 'Rear') && !devices.some((device) => device.RackSide === 'Front') ? 'Rear' : 'Front';
 
 
-const normalizeObjectToBox = (object: THREE.Object3D, targetWidth: number, targetHeight: number, targetDepth: number): void => {
-  const sourceBox = new THREE.Box3().setFromObject(object);
-  const sourceSize = sourceBox.getSize(new THREE.Vector3());
-  const safeSize = new THREE.Vector3(Math.max(sourceSize.x, 0.001), Math.max(sourceSize.y, 0.001), Math.max(sourceSize.z, 0.001));
-  object.scale.multiply(new THREE.Vector3(targetWidth / safeSize.x, targetHeight / safeSize.y, targetDepth / safeSize.z));
-  const scaledBox = new THREE.Box3().setFromObject(object);
-  const scaledCenter = scaledBox.getCenter(new THREE.Vector3());
-  object.position.sub(scaledCenter);
+const centerObject = (object: THREE.Object3D): void => {
+  const center = new THREE.Box3().setFromObject(object).getCenter(new THREE.Vector3());
+  object.position.sub(center);
+};
+
+/** Keep the authored panel proportions and only apply one uniform scale. */
+const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): void => {
+  let size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+  if (size.z > size.x) object.rotation.y = Math.PI / 2;
+  size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+  const targetWidth = rackInteriorWidth / slotCountByMountWidth[mountWidth];
+  const uniformScale = targetWidth / Math.max(size.x, 0.001);
+  object.scale.multiplyScalar(uniformScale);
+  centerObject(object);
 };
 
 const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
@@ -134,21 +145,6 @@ const tintObject = (object: THREE.Object3D, color: number, selected: boolean): v
   });
 };
 
-
-const setModelOpacity = (object: THREE.Object3D, opacity: number): void => {
-  object.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material as THREE.Material];
-    materials.forEach((source) => {
-      const material = source as THREE.MeshStandardMaterial;
-      material.transparent = opacity < 1;
-      material.opacity = opacity;
-      material.depthWrite = opacity >= 0.98;
-      material.side = THREE.DoubleSide;
-    });
-  });
-};
 
 const createSplineBackground = (): THREE.CanvasTexture | undefined => {
   if (typeof document === 'undefined') return undefined;
@@ -298,12 +294,14 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
-          normalizeObjectToBox(object, rackWidth, rackHeightFor(rack), rackDepth);
-          tintObject(object, rackSelected ? 0x6bdcff : 0x7fd7ff, rackSelected);
-          setModelOpacity(object, 0.72);
+          // Rack.glb already contains the correctly proportioned 42U cabinet.
+          // Turn the asset another 90° from the previous orientation (180° from
+          // its authored direction) before centering it on the device placements.
+          object.rotation.y = -Math.PI;
+          centerObject(object);
           const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
-          primitiveRack.visible = true;
+          primitiveRack.visible = false;
         } catch (error) {
           primitiveRack.visible = true;
         }
@@ -316,11 +314,23 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           try {
-            const width = widthForMount(device.MountWidth) - 0.03;
-            normalizeObjectToBox(object, width, heightForDevice(device), deviceDepth);
-            tintObject(object, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
-            const deviceModel = createModelWrapper(object, { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey });
-            deviceModel.position.copy(primitiveDevice.position);
+            preparePanelModel(object, device.MountWidth);
+            const deviceModel = new THREE.Group();
+            deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
+
+            // A panel model represents exactly one height unit. Multi-U devices
+            // are assembled from repeated 1U panels rather than distorting one.
+            for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
+              const panel = unitOffset === 0 ? object : cloneObject(object);
+              tintObject(panel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
+              panel.position.y = unitOffset * rackUnitHeight();
+              deviceModel.add(panel);
+            }
+            deviceModel.position.set(
+              xForSlot(device.MountWidth, device.HorizontalSlot),
+              yForDevice(rack, { ...device, UHeight: 1 }),
+              zForSide(device, selected)
+            );
             rackGroup.add(deviceModel);
             deviceObjectsRef.current[device.DeviceKey] = deviceModel;
             primitiveDevice.visible = false;
@@ -333,7 +343,14 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
+    const pointerStart = new THREE.Vector2();
     const onPointerDown = (event: PointerEvent): void => {
+      pointerStart.set(event.clientX, event.clientY);
+    };
+    const onPointerUp = (event: PointerEvent): void => {
+      // OrbitControls also starts on pointer-down. Only select when the pointer
+      // was released as a click, so dragging the room never opens a device.
+      if (pointerStart.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 5) return;
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -356,6 +373,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       }
     };
     renderer.domElement.addEventListener('pointerdown', onPointerDown);
+    renderer.domElement.addEventListener('pointerup', onPointerUp);
 
     const onResize = (): void => {
       if (!host) return;
@@ -385,6 +403,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+      renderer.domElement.removeEventListener('pointerup', onPointerUp);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
