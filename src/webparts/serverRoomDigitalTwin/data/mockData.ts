@@ -25,8 +25,8 @@ export const mockRacks: IRack[] = [
   { RackKey: 'rack-a01', RoomKey: 'demo-room-a', Title: 'Rack A01', RowLabel: 'A', RackNumber: '01', RackHeightU: 42, XPosition: -3.2, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Primary demo rack with mixed full-width and half-width devices.' },
   { RackKey: 'rack-a02', RoomKey: 'demo-room-a', Title: 'Rack A02', RowLabel: 'A', RackNumber: '02', RackHeightU: 42, XPosition: 0, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Demo rack showing rear-mounted and power equipment examples.' },
   { RackKey: 'rack-a03', RoomKey: 'demo-room-a', Title: 'Rack A03', RowLabel: 'A', RackNumber: '03', RackHeightU: 42, XPosition: 3.2, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Demo rack reserved for storage and documentation examples.' },
-  { RackKey: 'rack-b01', RoomKey: 'demo-room-b', Title: 'Rack B01', RowLabel: 'B', RackNumber: '01', RackHeightU: 48, XPosition: -1.6, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Tall dummy rack used to validate 48U scaling.' },
-  { RackKey: 'rack-b02', RoomKey: 'demo-room-b', Title: 'Rack B02', RowLabel: 'B', RackNumber: '02', RackHeightU: 24, XPosition: 1.6, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Short dummy edge rack used to validate variable U scale.' }
+  { RackKey: 'rack-b01', RoomKey: 'demo-room-b', Title: 'Rack B01', RowLabel: 'B', RackNumber: '01', RackHeightU: 42, XPosition: -1.6, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Native 42U GLB rack used for device placement examples.' },
+  { RackKey: 'rack-b02', RoomKey: 'demo-room-b', Title: 'Rack B02', RowLabel: 'B', RackNumber: '02', RackHeightU: 42, XPosition: 1.6, ZPosition: 0, Rotation: 0, ModelAssetKey: 'rack', Notes: 'Native 42U GLB rack used for edge equipment examples.' }
 ];
 
 export const mockDevices: IDevice[] = [
