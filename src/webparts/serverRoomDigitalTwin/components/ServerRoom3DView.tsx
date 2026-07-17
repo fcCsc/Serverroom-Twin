@@ -110,15 +110,22 @@ const centerObject = (object: THREE.Object3D): void => {
   object.position.sub(center);
 };
 
-/** Keep the authored panel proportions and only apply one uniform scale. */
-const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): void => {
+/** Fit one panel into exactly one rack unit and the selected horizontal slot. */
+const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THREE.Object3D => {
   let size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   if (size.z > size.x) object.rotation.y = Math.PI / 2;
   size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const targetWidth = rackInteriorWidth / slotCountByMountWidth[mountWidth];
-  const uniformScale = targetWidth / Math.max(size.x, 0.001);
-  object.scale.multiplyScalar(uniformScale);
   centerObject(object);
+  const panel = new THREE.Group();
+  panel.add(object);
+  const widthScale = targetWidth / Math.max(size.x, 0.001);
+  panel.scale.set(
+    widthScale,
+    (rackUnitHeight() - deviceGap) / Math.max(size.y, 0.001),
+    widthScale
+  );
+  return panel;
 };
 
 const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
@@ -313,14 +320,14 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           try {
-            preparePanelModel(object, device.MountWidth);
+            const preparedPanel = preparePanelModel(object, device.MountWidth);
             const deviceModel = new THREE.Group();
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
             // A panel model represents exactly one height unit. Multi-U devices
             // are assembled from repeated 1U panels rather than distorting one.
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
-              const panel = unitOffset === 0 ? object : cloneObject(object);
+              const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
               tintObject(panel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
               panel.position.y = unitOffset * rackUnitHeight();
               deviceModel.add(panel);
