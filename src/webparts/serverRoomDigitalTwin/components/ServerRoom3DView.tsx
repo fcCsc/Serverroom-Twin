@@ -26,7 +26,7 @@ const rackWidth = 1.4274;
 const rackDepth = 1.1587;
 const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
-const deviceDepth = 0.24;
+const deviceDepth = 0.16;
 const deviceGap = 0.001;
 const rackInteriorWidth = rackWidth * 0.88;
 
@@ -94,9 +94,9 @@ const yForDevice = (rack: IRack, device: IDevice): number => {
 const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
-  const inset = 0.1;
+  const inset = 0.16;
   const base = device.RackSide === 'Rear' ? rackDepth / 2 - deviceDepth / 2 - inset : -rackDepth / 2 + deviceDepth / 2 + inset;
-  const emphasis = selected ? 0.08 : 0;
+  const emphasis = selected ? 0.11 : 0;
   return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
 };
 
@@ -123,7 +123,7 @@ const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THRE
   panel.scale.set(
     widthScale,
     (rackUnitHeight() - deviceGap) / Math.max(size.y, 0.001),
-    widthScale
+    Math.min(widthScale, deviceDepth / Math.max(size.z, 0.001))
   );
   return panel;
 };
