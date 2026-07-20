@@ -27,17 +27,17 @@ const rackDepth = 1.1587;
 const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
 const deviceDepth = 0.24;
-const deviceGap = 0.008;
+const deviceGap = 0.001;
 const rackInteriorWidth = rackWidth * 0.88;
 
 const deviceColors: { [key: string]: number } = {
-  Backup: 0x8b3fd6,
-  Firewall: 0xd71920,
-  Switch: 0xf2c300,
-  Server: 0x20b15a,
-  UPS: 0x713b22,
-  Storage: 0x1677c8,
-  PatchPanel: 0x343b46
+  Backup: 0xb600ff,
+  Firewall: 0xff1f2d,
+  Switch: 0xfff000,
+  Server: 0x00ff66,
+  UPS: 0xff7a00,
+  Storage: 0x0094ff,
+  PatchPanel: 0xff35d1
 };
 
 const slotCountByMountWidth: { [key in MountWidth]: number } = {
@@ -94,9 +94,9 @@ const yForDevice = (rack: IRack, device: IDevice): number => {
 const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
-  const inset = 0.06;
+  const inset = 0.1;
   const base = device.RackSide === 'Rear' ? rackDepth / 2 - deviceDepth / 2 - inset : -rackDepth / 2 + deviceDepth / 2 + inset;
-  const emphasis = selected ? 0.04 : 0;
+  const emphasis = selected ? 0.08 : 0;
   return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
 };
 
@@ -131,10 +131,10 @@ const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THRE
 const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
   if (!source) return source;
   const material = source.clone() as THREE.MeshStandardMaterial;
-  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.55 : 0.28);
+  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.78 : 0.52);
   if (material.emissive) {
     material.emissive = new THREE.Color(selected ? color : 0x000000);
-    material.emissiveIntensity = selected ? 0.22 : 0;
+    material.emissiveIntensity = selected ? 0.42 : 0.06;
   }
   return material;
 };
@@ -201,7 +201,7 @@ const createPrimitiveDevice = (rack: IRack, device: IDevice, selected: boolean):
   const width = widthForMount(device.MountWidth) - 0.03;
   const height = heightForDevice(device) - deviceGap;
   const color = deviceColors[device.DeviceType] || 0x7aa8ff;
-  const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: selected ? color : 0x000000, emissiveIntensity: selected ? 0.22 : 0, metalness: 0.25, roughness: 0.5 });
+  const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: color, emissiveIntensity: selected ? 0.45 : 0.08, metalness: 0.18, roughness: 0.42 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, deviceDepth), material);
   mesh.position.set(xForSlot(device.MountWidth, device.HorizontalSlot), yForDevice(rack, device), zForSide(device, selected));
   mesh.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
@@ -255,10 +255,16 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const fillLight = new THREE.DirectionalLight(0xff8f99, 0.42);
     fillLight.position.set(-5, 4, -3);
     scene.add(fillLight);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), new THREE.MeshStandardMaterial({ color: 0xd2bcbc, roughness: 0.82, metalness: 0.04 }));
+    const minX = Math.min(...racks.map((rack) => rack.XPosition));
+    const maxX = Math.max(...racks.map((rack) => rack.XPosition));
+    const minZ = Math.min(...racks.map((rack) => rack.ZPosition));
+    const maxZ = Math.max(...racks.map((rack) => rack.ZPosition));
+    const floorWidth = Math.max(18, (maxX - minX) + rackWidth + 5);
+    const floorDepth = Math.max(14, (maxZ - minZ) + rackDepth + 5);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(floorWidth, floorDepth), new THREE.MeshStandardMaterial({ color: 0xd2bcbc, roughness: 0.82, metalness: 0.04 }));
     floor.receiveShadow = true;
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -standardRackHeight / 2 - 0.04;
+    floor.position.set((minX + maxX) / 2, -standardRackHeight / 2 - 0.04, (minZ + maxZ) / 2);
     scene.add(floor);
 
     const loader = new GLTFLoader();

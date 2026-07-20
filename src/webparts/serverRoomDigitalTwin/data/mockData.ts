@@ -88,10 +88,12 @@ export const dashboardDevices: IInfraDevice[] = [
 
 export const dashboardPlacements: IRackPlacement[] = [
   { id: 'pl-sw-core-01', rackId: 'rack-a01', deviceId: 'dev-sw-core-01', startU: 41, heightU: 1, mountSide: 'both', mountType: 'standard', frontLabel: 'SW-FRA-A01-CORE', rearLabel: 'SW-FRA-A01-CORE Rear' },
-  { id: 'pl-srv-app-01', rackId: 'rack-a01', deviceId: 'dev-srv-app-01', startU: 34, heightU: 2, mountSide: 'front', mountType: 'standard', frontLabel: 'APP-FRA-A01-01', rearLabel: 'Cable mgmt' },
-  { id: 'pl-fw-edge-01', rackId: 'rack-a02', deviceId: 'dev-fw-edge-01', startU: 21, heightU: 1, mountSide: 'front', mountType: 'standard', frontLabel: 'FW-FRA-A02-EDGE', rearLabel: 'FW rear' },
+  { id: 'pl-srv-app-01', rackId: 'rack-a01', deviceId: 'dev-srv-app-01', startU: 38, heightU: 2, mountSide: 'front', mountType: 'standard', frontLabel: 'APP-FRA-A01-01' },
+  { id: 'pl-srv-app-01b', rackId: 'rack-a01', deviceId: 'dev-srv-app-01', startU: 36, heightU: 2, mountSide: 'front', mountType: 'standard', frontLabel: 'APP-FRA-A01-02' },
+  { id: 'pl-sw-core-01b', rackId: 'rack-a01', deviceId: 'dev-sw-core-01', startU: 35, heightU: 1, mountSide: 'front', mountType: 'standard', frontLabel: 'SW-FRA-A01-TOR' },
+  { id: 'pl-fw-edge-01', rackId: 'rack-a02', deviceId: 'dev-fw-edge-01', startU: 21, heightU: 1, mountSide: 'front', mountType: 'standard', frontLabel: 'FW-FRA-A02-EDGE' },
   { id: 'pl-ups-a02-01', rackId: 'rack-a02', deviceId: 'dev-ups-a02-01', startU: 1, heightU: 3, mountSide: 'rear', mountType: 'standard', frontLabel: 'UPS front', rearLabel: 'UPS-FRA-A02-01' },
   { id: 'pl-patch-a03-01', rackId: 'rack-a03', deviceId: 'dev-patch-a03-01', startU: 12, heightU: 1, mountSide: 'both', mountType: 'standard', frontLabel: 'PATCH-FRA-A03-01', rearLabel: 'PATCH rear' },
-  { id: 'pl-lab-b01-01', rackId: 'rack-b01', deviceId: 'dev-lab-b01-01', startU: 5, heightU: 2, mountSide: 'front', mountType: 'standard', frontLabel: 'LAB-FRA-B01-01', rearLabel: 'Storage rear' },
-  { id: 'pl-lab-b01-02', rackId: 'rack-b01', deviceId: 'dev-lab-b01-02', startU: 5, heightU: 1, mountSide: 'front', mountType: 'standard', frontLabel: 'LAB-FRA-B01-02', rearLabel: 'FW rear' }
+  { id: 'pl-lab-b01-01', rackId: 'rack-b01', deviceId: 'dev-lab-b01-01', startU: 5, heightU: 2, mountSide: 'front', mountType: 'standard', frontLabel: 'LAB-FRA-B01-01' },
+  { id: 'pl-lab-b01-02', rackId: 'rack-b01', deviceId: 'dev-lab-b01-02', startU: 5, heightU: 1, mountSide: 'front', mountType: 'standard', frontLabel: 'LAB-FRA-B01-02' }
 ];
