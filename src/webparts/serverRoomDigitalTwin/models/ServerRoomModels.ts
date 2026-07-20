@@ -133,5 +133,5 @@ export interface IRackPlacement {
   mountSide: RackMountSide;
   mountType: RackMountType;
   frontLabel: string;
-  rearLabel: string;
+  rearLabel?: string;
 }
