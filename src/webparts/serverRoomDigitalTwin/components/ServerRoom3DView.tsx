@@ -26,19 +26,20 @@ const rackWidth = 1.4274;
 const rackDepth = 1.1587;
 const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
-const deviceDepth = 0.16;
 const rackInteriorWidth = rackWidth * 0.88;
 const nativeRackUnitHeight = standardRackHeight / standardRackUnits;
-const panelFrontOffset = 0.018;
+const panelDepth = rackDepth / 2;
+const panelCenterOffset = rackDepth / 4;
+const panelEdgeGap = 0.006;
 
 const deviceColors: { [key: string]: number } = {
-  Backup: 0xb600ff,
-  Firewall: 0xff1f2d,
-  Switch: 0xfff000,
-  Server: 0x00ff66,
-  UPS: 0xff7a00,
-  Storage: 0x0094ff,
-  PatchPanel: 0xff35d1
+  Backup: 0x6f0013,
+  Firewall: 0xff161f,
+  Switch: 0xffd900,
+  Server: 0x00c82f,
+  UPS: 0xffd900,
+  Storage: 0x0078c8,
+  PatchPanel: 0x0078c8
 };
 
 const slotCountByMountWidth: { [key in MountWidth]: number } = {
@@ -95,9 +96,9 @@ const yForDevice = (rack: IRack, device: IDevice): number => {
 const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
-  const base = device.RackSide === 'Rear' ? rackDepth / 2 + panelFrontOffset : -rackDepth / 2 - panelFrontOffset;
-  const emphasis = selected ? 0.11 : 0;
-  return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
+  const base = device.RackSide === 'Rear' ? panelCenterOffset : -panelCenterOffset;
+  const emphasis = selected ? 0.08 : 0;
+  return device.RackSide === 'Rear' ? base + emphasis : base - emphasis;
 };
 
 const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number => rackZPosition + (rackSide === 'Rear' ? 4.4 : -4.4);
@@ -126,28 +127,57 @@ const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D =
   return rackModel;
 };
 
-/** Fit one panel into exactly one rack unit without stretching the GLB. */
-const preparePanelModel = (object: THREE.Object3D): THREE.Object3D => {
-  // The Spline panels are authored like stackable blocks. Keep their native
-  // orientation and aspect ratio; only apply a uniform scale so one piece is
-  // exactly 1U high. Multi-U devices are separate 1U pieces stacked directly.
+/** Fit one panel into one U, spanning rack width and running from the rack edge to its centre. */
+const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THREE.Object3D => {
+  // The Spline panel assets must read like horizontal rack blades: their wide
+  // face sits across the rack, while the short depth begins at the front/rear
+  // cabinet edge and ends at the rack centre. Scale each axis to the physical
+  // rack slot instead of preserving the previous side-on GLB proportions.
   centerObject(object);
   const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const panel = new THREE.Group();
   panel.add(object);
-  panel.scale.setScalar(rackUnitHeight() / Math.max(size.y, 0.001));
+  panel.scale.set(
+    (widthForMount(mountWidth) - panelEdgeGap * 2) / Math.max(size.x, 0.001),
+    rackUnitHeight() / Math.max(size.y, 0.001),
+    (panelDepth - panelEdgeGap * 2) / Math.max(size.z, 0.001)
+  );
   return panel;
 };
 
 const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
   if (!source) return source;
   const material = source.clone() as THREE.MeshStandardMaterial;
-  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.78 : 0.52);
+  material.metalness = Math.max(material.metalness || 0, 0.2);
+  material.roughness = Math.min(material.roughness || 0.5, 0.36);
+  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.86 : 0.7);
   if (material.emissive) {
     material.emissive = new THREE.Color(selected ? color : 0x000000);
     material.emissiveIntensity = selected ? 0.42 : 0.06;
   }
   return material;
+};
+
+
+const polishRackObject = (object: THREE.Object3D, selected: boolean): void => {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    const applyRackMaterial = (source: THREE.Material): THREE.Material => {
+      const material = source.clone() as THREE.MeshStandardMaterial;
+      if (material.color) material.color.lerp(new THREE.Color(selected ? 0x7a8294 : 0x454b55), selected ? 0.56 : 0.42);
+      material.transparent = true;
+      material.opacity = Math.min(material.opacity || 1, 0.72);
+      material.metalness = Math.max(material.metalness || 0, 0.68);
+      material.roughness = Math.min(material.roughness || 0.5, 0.2);
+      return material;
+    };
+    mesh.material = Array.isArray(mesh.material)
+      ? mesh.material.map((material) => applyRackMaterial(material))
+      : applyRackMaterial(mesh.material as THREE.Material);
+  });
 };
 
 const tintObject = (object: THREE.Object3D, color: number, selected: boolean): void => {
@@ -191,8 +221,8 @@ const createModelWrapper = (object: THREE.Object3D, userData: { [key: string]: s
 const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => {
   const group = new THREE.Group();
   const rackHeight = rackHeightFor(rack);
-  const frameMaterial = new THREE.MeshStandardMaterial({ color: selected ? 0x6bdcff : 0x22364b, transparent: true, opacity: 0.72, metalness: 0.35, roughness: 0.45 });
-  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x081522, transparent: true, opacity: 0.18 });
+  const frameMaterial = new THREE.MeshStandardMaterial({ color: selected ? 0x7a8294 : 0x454b55, transparent: true, opacity: 0.68, metalness: 0.72, roughness: 0.18 });
+  const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x2d3435, transparent: true, opacity: 0.16, metalness: 0.55, roughness: 0.22 });
   const body = new THREE.Mesh(new THREE.BoxGeometry(rackWidth, rackHeight, rackDepth), bodyMaterial);
   const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(rackWidth, rackHeight, rackDepth)), new THREE.LineBasicMaterial({ color: selected ? 0x6bdcff : 0x6f8daa }));
   const top = new THREE.Mesh(new THREE.BoxGeometry(rackWidth + 0.08, 0.05, rackDepth + 0.08), frameMaterial);
@@ -212,8 +242,8 @@ const createPrimitiveDevice = (rack: IRack, device: IDevice, selected: boolean):
   const width = widthForMount(device.MountWidth);
   const height = heightForDevice(device);
   const color = deviceColors[device.DeviceType] || 0x7aa8ff;
-  const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: color, emissiveIntensity: selected ? 0.45 : 0.08, metalness: 0.18, roughness: 0.42 });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, deviceDepth), material);
+  const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: color, emissiveIntensity: selected ? 0.45 : 0.08, metalness: 0.24, roughness: 0.34 });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(width - panelEdgeGap * 2, height, panelDepth - panelEdgeGap * 2), material);
   mesh.position.set(xForSlot(device.MountWidth, device.HorizontalSlot), yForDevice(rack, device), zForSide(device, selected));
   mesh.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
   return mesh;
@@ -318,6 +348,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
           const preparedRack = prepareRackModel(object, rack);
+          polishRackObject(preparedRack, rackSelected);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
           primitiveRack.visible = false;
@@ -333,7 +364,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           try {
-            const preparedPanel = preparePanelModel(object);
+            const preparedPanel = preparePanelModel(object, device.MountWidth);
             const deviceModel = new THREE.Group();
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
