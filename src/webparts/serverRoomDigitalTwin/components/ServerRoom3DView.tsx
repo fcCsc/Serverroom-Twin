@@ -73,7 +73,7 @@ const buildAssetUrls = (assetLibraryPath: string, currentSiteUrl: string | undef
   return unique(sharePointPaths.map((relativePath) => `${site}/${encodePath(trimSlashes(relativePath))}`));
 };
 
-const widthForMount = (mountWidth: MountWidth): number => rackWidth / slotCountByMountWidth[mountWidth];
+const widthForMount = (mountWidth: MountWidth): number => rackInteriorWidth / slotCountByMountWidth[mountWidth];
 const rackHeightFor = (rack: IRack): number => standardRackHeight * Math.max(1, rack.RackHeightU) / standardRackUnits;
 const rackUnitHeight = (): number => standardRackHeight / standardRackUnits;
 
@@ -216,7 +216,7 @@ const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => 
 };
 
 const createPrimitiveDevice = (rack: IRack, device: IDevice, selected: boolean): THREE.Object3D => {
-  const width = widthForMount(device.MountWidth) - 0.03;
+  const width = widthForMount(device.MountWidth);
   const height = heightForDevice(device);
   const color = deviceColors[device.DeviceType] || 0x7aa8ff;
   const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: color, emissiveIntensity: selected ? 0.45 : 0.08, metalness: 0.18, roughness: 0.42 });
