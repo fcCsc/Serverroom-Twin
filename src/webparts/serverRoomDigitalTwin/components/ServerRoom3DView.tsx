@@ -109,6 +109,25 @@ const centerObject = (object: THREE.Object3D): void => {
   object.position.sub(center);
 };
 
+/** Fit a rack GLB to the rack dimensions used by the scene layout. */
+const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D => {
+  // Face the cabinet openings towards the front/rear device planes.
+  // Device positions deliberately remain independent of this model
+  // correction, so front and rear panels may share the same U level.
+  object.rotation.y = rackModelRotationY;
+  centerObject(object);
+
+  const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
+  const rackModel = new THREE.Group();
+  rackModel.add(object);
+  rackModel.scale.set(
+    rackWidth / Math.max(size.x, 0.001),
+    rackHeightFor(rack) / Math.max(size.y, 0.001),
+    rackDepth / Math.max(size.z, 0.001)
+  );
+  return rackModel;
+};
+
 /** Fit one panel into exactly one rack unit and the selected horizontal slot. */
 const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THREE.Object3D => {
   let size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
@@ -305,12 +324,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
-          // Face the cabinet openings towards the front/rear device planes.
-          // Device positions deliberately remain independent of this model
-          // correction, so front and rear panels may share the same U level.
-          object.rotation.y = rackModelRotationY;
-          centerObject(object);
-          const rackModel = createModelWrapper(object, { type: 'rack', rackKey: rack.RackKey });
+          const preparedRack = prepareRackModel(object, rack);
+          const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
           primitiveRack.visible = false;
         } catch (error) {
