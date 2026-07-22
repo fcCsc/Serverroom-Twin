@@ -93,7 +93,7 @@ const yForDevice = (rack: IRack, device: IDevice): number => {
   return -rackHeightFor(rack) / 2 + centerU * unitHeight;
 };
 
-const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight, 0.045);
+const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight * panelVerticalFillFactor, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
   const base = device.RackSide === 'Rear' ? panelCenterOffset : -panelCenterOffset;
@@ -368,8 +368,9 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             const deviceModel = new THREE.Group();
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
-            // A panel model represents exactly one height unit. Multi-U devices
-            // are assembled from repeated 1U panels rather than distorting one.
+            // A panel model represents one rack pitch. Multi-U devices are
+            // assembled from repeated 1U panels, and each next panel starts at
+            // the exact next U so a full 42U stack has no artificial spacing.
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
               tintObject(panel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
