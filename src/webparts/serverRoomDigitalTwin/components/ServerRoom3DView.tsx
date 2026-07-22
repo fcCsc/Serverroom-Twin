@@ -28,6 +28,8 @@ const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
 const deviceDepth = 0.16;
 const rackInteriorWidth = rackWidth * 0.88;
+const nativeRackUnitHeight = standardRackHeight / standardRackUnits;
+const panelFrontOffset = 0.018;
 
 const deviceColors: { [key: string]: number } = {
   Backup: 0xb600ff,
@@ -75,7 +77,7 @@ const buildAssetUrls = (assetLibraryPath: string, currentSiteUrl: string | undef
 
 const widthForMount = (mountWidth: MountWidth): number => rackInteriorWidth / slotCountByMountWidth[mountWidth];
 const rackHeightFor = (rack: IRack): number => standardRackHeight * Math.max(1, rack.RackHeightU) / standardRackUnits;
-const rackUnitHeight = (): number => standardRackHeight / standardRackUnits;
+const rackUnitHeight = (): number => nativeRackUnitHeight;
 
 const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
   const slots = slotCountByMountWidth[mountWidth];
@@ -93,8 +95,7 @@ const yForDevice = (rack: IRack, device: IDevice): number => {
 const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight, 0.045);
 
 const zForSide = (device: IDevice, selected: boolean): number => {
-  const inset = 0.16;
-  const base = device.RackSide === 'Rear' ? rackDepth / 2 - deviceDepth / 2 - inset : -rackDepth / 2 + deviceDepth / 2 + inset;
+  const base = device.RackSide === 'Rear' ? rackDepth / 2 + panelFrontOffset : -rackDepth / 2 - panelFrontOffset;
   const emphasis = selected ? 0.11 : 0;
   return device.RackSide === 'Rear' ? base - emphasis : base + emphasis;
 };
@@ -109,7 +110,7 @@ const centerObject = (object: THREE.Object3D): void => {
   object.position.sub(center);
 };
 
-/** Fit a rack GLB to the rack dimensions used by the scene layout. */
+/** Fit a rack GLB without stretching the authored proportions. */
 const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D => {
   // Face the cabinet openings towards the front/rear device planes.
   // Device positions deliberately remain independent of this model
@@ -120,29 +121,21 @@ const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D =
   const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const rackModel = new THREE.Group();
   rackModel.add(object);
-  rackModel.scale.set(
-    rackWidth / Math.max(size.x, 0.001),
-    rackHeightFor(rack) / Math.max(size.y, 0.001),
-    rackDepth / Math.max(size.z, 0.001)
-  );
+  const uniformScale = rackHeightFor(rack) / Math.max(size.y, 0.001);
+  rackModel.scale.setScalar(uniformScale);
   return rackModel;
 };
 
-/** Fit one panel into exactly one rack unit and the selected horizontal slot. */
-const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THREE.Object3D => {
-  let size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
-  if (size.z > size.x) object.rotation.y = Math.PI / 2;
-  size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
-  const targetWidth = rackInteriorWidth / slotCountByMountWidth[mountWidth];
+/** Fit one panel into exactly one rack unit without stretching the GLB. */
+const preparePanelModel = (object: THREE.Object3D): THREE.Object3D => {
+  // The Spline panels are authored like stackable blocks. Keep their native
+  // orientation and aspect ratio; only apply a uniform scale so one piece is
+  // exactly 1U high. Multi-U devices are separate 1U pieces stacked directly.
   centerObject(object);
+  const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const panel = new THREE.Group();
   panel.add(object);
-  const widthScale = targetWidth / Math.max(size.x, 0.001);
-  panel.scale.set(
-    widthScale,
-    rackUnitHeight() / Math.max(size.y, 0.001),
-    Math.min(widthScale, deviceDepth / Math.max(size.z, 0.001))
-  );
+  panel.scale.setScalar(rackUnitHeight() / Math.max(size.y, 0.001));
   return panel;
 };
 
@@ -340,7 +333,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           try {
-            const preparedPanel = preparePanelModel(object, device.MountWidth);
+            const preparedPanel = preparePanelModel(object);
             const deviceModel = new THREE.Group();
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
