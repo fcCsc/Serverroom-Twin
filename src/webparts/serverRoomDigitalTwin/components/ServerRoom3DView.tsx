@@ -27,7 +27,6 @@ const rackDepth = 1.1587;
 const standardRackHeight = 4.2972;
 const standardRackUnits = 42;
 const deviceDepth = 0.16;
-const deviceGap = 0.001;
 const rackInteriorWidth = rackWidth * 0.88;
 
 const deviceColors: { [key: string]: number } = {
@@ -122,7 +121,7 @@ const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THRE
   const widthScale = targetWidth / Math.max(size.x, 0.001);
   panel.scale.set(
     widthScale,
-    (rackUnitHeight() - deviceGap) / Math.max(size.y, 0.001),
+    rackUnitHeight() / Math.max(size.y, 0.001),
     Math.min(widthScale, deviceDepth / Math.max(size.z, 0.001))
   );
   return panel;
@@ -199,7 +198,7 @@ const createPrimitiveRack = (rack: IRack, selected: boolean): THREE.Object3D => 
 
 const createPrimitiveDevice = (rack: IRack, device: IDevice, selected: boolean): THREE.Object3D => {
   const width = widthForMount(device.MountWidth) - 0.03;
-  const height = heightForDevice(device) - deviceGap;
+  const height = heightForDevice(device);
   const color = deviceColors[device.DeviceType] || 0x7aa8ff;
   const material = new THREE.MeshStandardMaterial({ color: selected ? 0xffffff : color, emissive: color, emissiveIntensity: selected ? 0.45 : 0.08, metalness: 0.18, roughness: 0.42 });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, deviceDepth), material);
