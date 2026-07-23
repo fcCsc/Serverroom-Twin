@@ -31,7 +31,6 @@ const nativeRackUnitHeight = standardRackHeight / standardRackUnits;
 const panelDepth = rackDepth / 2;
 const panelCenterOffset = rackDepth / 4;
 const panelEdgeGap = 0.006;
-const panelVerticalFillFactor = 1.1;
 
 const deviceColors: { [key: string]: number } = {
   Backup: 0x6f0013,
@@ -134,16 +133,13 @@ const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THRE
   // face sits across the rack, while the short depth begins at the front/rear
   // cabinet edge and ends at the rack centre. Scale each axis to the physical
   // rack slot instead of preserving the previous side-on GLB proportions.
-  // The authored panels have chamfers/studs that leave visible air when scaled
-  // to the exact U pitch, so the mesh slightly overfills the pitch while the
-  // stack origin still advances by exactly 1U.
   centerObject(object);
   const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const panel = new THREE.Group();
   panel.add(object);
   panel.scale.set(
     (widthForMount(mountWidth) - panelEdgeGap * 2) / Math.max(size.x, 0.001),
-    (rackUnitHeight() * panelVerticalFillFactor) / Math.max(size.y, 0.001),
+    rackUnitHeight() / Math.max(size.y, 0.001),
     (panelDepth - panelEdgeGap * 2) / Math.max(size.z, 0.001)
   );
   return panel;
