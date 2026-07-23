@@ -260,6 +260,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
   React.useEffect(() => {
     if (!hostRef.current) return undefined;
 
+    let disposed = false;
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -296,6 +297,15 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     const fillLight = new THREE.DirectionalLight(0xff8f99, 0.42);
     fillLight.position.set(-5, 4, -3);
     scene.add(fillLight);
+    if (racks.length === 0) {
+      onSceneUnavailable('No racks are available for the selected room.');
+      return () => {
+        disposed = true;
+        renderer.dispose();
+        if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
+      };
+    }
+
     const minX = Math.min(...racks.map((rack) => rack.XPosition));
     const maxX = Math.max(...racks.map((rack) => rack.XPosition));
     const minZ = Math.min(...racks.map((rack) => rack.ZPosition));
@@ -313,6 +323,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
 
     const findAsset = (key: string): IModelAsset | undefined => modelAssets.filter((asset) => asset.ModelAssetKey === key)[0];
     const loadAsset = (assetKey: string, onLoaded: (object: THREE.Object3D) => void): void => {
+      if (disposed) return;
       if (assetCache[assetKey]) {
         onLoaded(cloneObject(assetCache[assetKey] as THREE.Object3D));
         return;
@@ -320,11 +331,12 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       if (!enableGlbLoading) return;
       const urls = buildAssetUrls(assetLibraryPath, currentSiteUrl, findAsset(assetKey));
       const tryLoad = (index: number): void => {
-        if (index >= urls.length) return;
+        if (disposed || index >= urls.length) return;
         loader.load(urls[index], (gltf) => {
+          if (disposed) return;
           assetCache[assetKey] = gltf.scene;
           onLoaded(cloneObject(gltf.scene));
-        }, undefined, () => tryLoad(index + 1));
+        }, undefined, () => { if (!disposed) tryLoad(index + 1); });
       };
       tryLoad(0);
     };
@@ -444,13 +456,19 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         controls.target.lerp(lookAtTargetRef.current, 0.055);
         if (camera.position.distanceTo(cameraTargetRef.current) < 0.015 && controls.target.distanceTo(lookAtTargetRef.current) < 0.015) focusActiveRef.current = false;
       }
-      controls.update();
-      renderer.render(scene, camera);
-      frameId = window.requestAnimationFrame(animate);
+      try {
+        controls.update();
+        renderer.render(scene, camera);
+        frameId = window.requestAnimationFrame(animate);
+      } catch (error) {
+        focusActiveRef.current = false;
+        onSceneUnavailable('3D rendering stopped unexpectedly, so please use the rack elevation fallback.');
+      }
     };
     animate();
 
     return () => {
+      disposed = true;
       window.cancelAnimationFrame(frameId);
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
