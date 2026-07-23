@@ -450,6 +450,29 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     onResize();
 
     let frameId = 0;
+    let renderedFrames = 0;
+    const reportBlackFrameIfNeeded = (): void => {
+      renderedFrames += 1;
+      if (renderedFrames !== 45) return;
+      try {
+        const context = renderer.getContext();
+        const width = context.drawingBufferWidth;
+        const height = context.drawingBufferHeight;
+        if (width < 3 || height < 3) return;
+        const pixels = new Uint8Array(3 * 3 * 4);
+        context.readPixels(Math.floor(width / 2) - 1, Math.floor(height / 2) - 1, 3, 3, context.RGBA, context.UNSIGNED_BYTE, pixels);
+        let luminance = 0;
+        for (let index = 0; index < pixels.length; index += 4) luminance += pixels[index] + pixels[index + 1] + pixels[index + 2];
+        if (luminance / (pixels.length / 4) < 9) onSceneUnavailable('The 3D canvas rendered black in this browser, so the rack elevation fallback is shown.');
+      } catch (error) {
+        onSceneUnavailable('3D rendering could not be verified, so the rack elevation fallback is shown.');
+      }
+    };
+    const onContextLost = (event: Event): void => {
+      event.preventDefault();
+      onSceneUnavailable('3D rendering lost its WebGL context, so the rack elevation fallback is shown.');
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
     const animate = (): void => {
       if (focusActiveRef.current) {
         camera.position.lerp(cameraTargetRef.current, 0.055);
@@ -459,6 +482,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       try {
         controls.update();
         renderer.render(scene, camera);
+        reportBlackFrameIfNeeded();
         frameId = window.requestAnimationFrame(animate);
       } catch (error) {
         focusActiveRef.current = false;
@@ -473,6 +497,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
