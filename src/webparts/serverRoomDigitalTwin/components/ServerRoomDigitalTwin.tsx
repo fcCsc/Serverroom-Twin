@@ -92,6 +92,7 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
 
   const onSceneUnavailable = React.useCallback((message: string): void => {
     setSceneMessage(message);
+    setViewMode('Elevation');
   }, []);
 
   return (
