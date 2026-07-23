@@ -51,7 +51,7 @@ const ServerRoomDigitalTwin: React.FC<IServerRoomDigitalTwinProps> = ({ racksLis
   const [selectedRackKey, setSelectedRackKey] = React.useState<string>(visibleRacks[0] ? visibleRacks[0].RackKey : '');
   const [selectedDeviceKey, setSelectedDeviceKey] = React.useState<string | undefined>();
   const [rackSide, setRackSide] = React.useState<RackSide>('Front');
-  const [viewMode, setViewMode] = React.useState<ViewMode>('Room');
+  const [viewMode, setViewMode] = React.useState<ViewMode>(() => currentSiteUrl ? 'Room' : 'Elevation');
   const [settingsOpen, setSettingsOpen] = React.useState<boolean>(false);
   const [sceneMessage, setSceneMessage] = React.useState<string | undefined>();
   const [visibleColumns, setVisibleColumns] = React.useState<{ [key: string]: boolean }>({ manufacturer: true, model: true, ip: true, vlan: true, serial: true, warranty: true, maintenance: true });
