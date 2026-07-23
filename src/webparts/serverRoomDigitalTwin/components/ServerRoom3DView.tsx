@@ -363,7 +363,13 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
           polishRackObject(preparedRack, rackSelected);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
-          primitiveRack.visible = false;
+          // Keep the procedural rack in the scene as a permanent safety layer.
+          // On GitHub Pages the GLB files can load slightly later (or with
+          // browser/GPU-specific material quirks), and replacing the primitive
+          // immediately made the preview appear to flash briefly and then go
+          // black. Leaving the primitive visible guarantees the room remains
+          // inspectable even when an authored GLB is too dark or incomplete.
+          primitiveRack.visible = true;
         } catch (error) {
           primitiveRack.visible = true;
         }
@@ -396,7 +402,10 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             );
             rackGroup.add(deviceModel);
             deviceObjectsRef.current[device.DeviceKey] = deviceModel;
-            primitiveDevice.visible = false;
+            // Keep the color-coded primitive device visible so the rack
+            // inventory never disappears if a GLB panel renders black or
+            // fails after an initial successful request on static hosting.
+            primitiveDevice.visible = true;
           } catch (error) {
             primitiveDevice.visible = true;
           }
