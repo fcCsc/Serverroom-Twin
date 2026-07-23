@@ -31,6 +31,7 @@ const nativeRackUnitHeight = standardRackHeight / standardRackUnits;
 const panelDepth = rackDepth / 2;
 const panelCenterOffset = rackDepth / 4;
 const panelEdgeGap = 0.006;
+const panelVerticalFillFactor = 1.1;
 
 const deviceColors: { [key: string]: number } = {
   Backup: 0x6f0013,
