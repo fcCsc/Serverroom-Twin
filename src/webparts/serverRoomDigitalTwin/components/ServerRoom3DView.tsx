@@ -146,50 +146,12 @@ const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THRE
   return panel;
 };
 
-const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
-  if (!source) return source;
-  const material = source.clone() as THREE.MeshStandardMaterial;
-  material.metalness = Math.max(material.metalness || 0, 0.2);
-  material.roughness = Math.min(material.roughness || 0.5, 0.36);
-  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.86 : 0.7);
-  if (material.emissive) {
-    material.emissive = new THREE.Color(selected ? color : 0x000000);
-    material.emissiveIntensity = selected ? 0.42 : 0.06;
-  }
-  return material;
-};
-
-
-const polishRackObject = (object: THREE.Object3D, selected: boolean): void => {
+const enableModelShadows = (object: THREE.Object3D): void => {
   object.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    const applyRackMaterial = (source: THREE.Material): THREE.Material => {
-      const material = source.clone() as THREE.MeshStandardMaterial;
-      if (material.color) material.color.lerp(new THREE.Color(selected ? 0x7a8294 : 0x454b55), selected ? 0.56 : 0.42);
-      material.transparent = true;
-      material.opacity = Math.min(material.opacity || 1, 0.72);
-      material.metalness = Math.max(material.metalness || 0, 0.68);
-      material.roughness = Math.min(material.roughness || 0.5, 0.2);
-      return material;
-    };
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => applyRackMaterial(material))
-      : applyRackMaterial(mesh.material as THREE.Material);
-  });
-};
-
-const tintObject = (object: THREE.Object3D, color: number, selected: boolean): void => {
-  object.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => tintMaterial(material, color, selected) || material)
-      : tintMaterial(mesh.material as THREE.Material, color, selected) || mesh.material;
   });
 };
 
@@ -361,7 +323,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
           const preparedRack = prepareRackModel(object, rack);
-          polishRackObject(preparedRack, rackSelected);
+          enableModelShadows(preparedRack);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
           // Keep the procedural rack in the scene as a permanent safety layer.
@@ -392,7 +354,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             // the exact next U so a full 42U stack has no artificial spacing.
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
-              tintObject(panel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
+              enableModelShadows(panel);
               panel.position.y = unitOffset * rackUnitHeight();
               deviceModel.add(panel);
             }
