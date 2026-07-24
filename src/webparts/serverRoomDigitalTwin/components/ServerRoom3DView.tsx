@@ -31,6 +31,7 @@ const nativeRackUnitHeight = standardRackHeight / standardRackUnits;
 const panelDepth = rackDepth / 2;
 const panelCenterOffset = rackDepth / 4;
 const panelEdgeGap = 0.006;
+const panelVerticalFillFactor = 1.1;
 
 const deviceColors: { [key: string]: number } = {
   Backup: 0x6f0013,
@@ -127,68 +128,24 @@ const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D =
   return rackModel;
 };
 
-/** Fit one panel into one U, spanning rack width and running from the rack edge to its centre. */
-const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THREE.Object3D => {
-  // The Spline panel assets must read like horizontal rack blades: their wide
-  // face sits across the rack, while the short depth begins at the front/rear
-  // cabinet edge and ends at the rack centre. Scale each axis to the physical
-  // rack slot instead of preserving the previous side-on GLB proportions.
+/** Orient one authored Spline panel as a rack blade without changing its proportions. */
+const preparePanelModel = (object: THREE.Object3D): THREE.Object3D => {
+  // The exported panel GLBs already contain the intended proportions, colors
+  // and surface details. Only rotate the authored long axis across the rack and
+  // center the object; slot positioning and U stacking happen on the wrapper.
+  object.rotation.y = Math.PI / 2;
   centerObject(object);
-  const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const panel = new THREE.Group();
   panel.add(object);
-  panel.scale.set(
-    (widthForMount(mountWidth) - panelEdgeGap * 2) / Math.max(size.x, 0.001),
-    rackUnitHeight() / Math.max(size.y, 0.001),
-    (panelDepth - panelEdgeGap * 2) / Math.max(size.z, 0.001)
-  );
   return panel;
 };
 
-const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
-  if (!source) return source;
-  const material = source.clone() as THREE.MeshStandardMaterial;
-  material.metalness = Math.max(material.metalness || 0, 0.2);
-  material.roughness = Math.min(material.roughness || 0.5, 0.36);
-  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.86 : 0.7);
-  if (material.emissive) {
-    material.emissive = new THREE.Color(selected ? color : 0x000000);
-    material.emissiveIntensity = selected ? 0.42 : 0.06;
-  }
-  return material;
-};
-
-
-const polishRackObject = (object: THREE.Object3D, selected: boolean): void => {
+const enableModelShadows = (object: THREE.Object3D): void => {
   object.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    const applyRackMaterial = (source: THREE.Material): THREE.Material => {
-      const material = source.clone() as THREE.MeshStandardMaterial;
-      if (material.color) material.color.lerp(new THREE.Color(selected ? 0x7a8294 : 0x454b55), selected ? 0.56 : 0.42);
-      material.transparent = true;
-      material.opacity = Math.min(material.opacity || 1, 0.72);
-      material.metalness = Math.max(material.metalness || 0, 0.68);
-      material.roughness = Math.min(material.roughness || 0.5, 0.2);
-      return material;
-    };
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => applyRackMaterial(material))
-      : applyRackMaterial(mesh.material as THREE.Material);
-  });
-};
-
-const tintObject = (object: THREE.Object3D, color: number, selected: boolean): void => {
-  object.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => tintMaterial(material, color, selected) || material)
-      : tintMaterial(mesh.material as THREE.Material, color, selected) || mesh.material;
   });
 };
 
@@ -360,7 +317,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
           const preparedRack = prepareRackModel(object, rack);
-          polishRackObject(preparedRack, rackSelected);
+          enableModelShadows(preparedRack);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
           primitiveRack.visible = false;
@@ -376,7 +333,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           try {
-            const preparedPanel = preparePanelModel(object, device.MountWidth);
+            const preparedPanel = preparePanelModel(object);
             const deviceModel = new THREE.Group();
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
@@ -385,7 +342,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             // the exact next U so a full 42U stack has no artificial spacing.
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
-              tintObject(panel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
+              enableModelShadows(panel);
+              if (device.RackSide === 'Rear') panel.rotation.y = Math.PI;
               panel.position.y = unitOffset * rackUnitHeight();
               deviceModel.add(panel);
             }
