@@ -427,7 +427,13 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
           enableModelShadows(preparedRack);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
-          primitiveRack.visible = false;
+          // Keep the procedural rack in the scene as a permanent safety layer.
+          // On GitHub Pages the GLB files can load slightly later (or with
+          // browser/GPU-specific material quirks), and replacing the primitive
+          // immediately made the preview appear to flash briefly and then go
+          // black. Leaving the primitive visible guarantees the room remains
+          // inspectable even when an authored GLB is too dark or incomplete.
+          primitiveRack.visible = true;
         } catch (error) {
           primitiveRack.visible = true;
         }
@@ -451,7 +457,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
               enableModelShadows(panel);
-              if (device.RackSide === 'Rear') panel.rotation.y = Math.PI;
+              panel.position.y = unitOffset * rackUnitHeight();
               deviceModel.add(panel);
               panels.push(panel);
             }
@@ -464,7 +470,10 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             );
             rackGroup.add(deviceModel);
             deviceObjectsRef.current[device.DeviceKey] = deviceModel;
-            primitiveDevice.visible = false;
+            // Keep the color-coded primitive device visible so the rack
+            // inventory never disappears if a GLB panel renders black or
+            // fails after an initial successful request on static hosting.
+            primitiveDevice.visible = true;
           } catch (error) {
             primitiveDevice.visible = true;
           }
@@ -518,6 +527,29 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     onResize();
 
     let frameId = 0;
+    let renderedFrames = 0;
+    const reportBlackFrameIfNeeded = (): void => {
+      renderedFrames += 1;
+      if (renderedFrames !== 45) return;
+      try {
+        const context = renderer.getContext();
+        const width = context.drawingBufferWidth;
+        const height = context.drawingBufferHeight;
+        if (width < 3 || height < 3) return;
+        const pixels = new Uint8Array(3 * 3 * 4);
+        context.readPixels(Math.floor(width / 2) - 1, Math.floor(height / 2) - 1, 3, 3, context.RGBA, context.UNSIGNED_BYTE, pixels);
+        let luminance = 0;
+        for (let index = 0; index < pixels.length; index += 4) luminance += pixels[index] + pixels[index + 1] + pixels[index + 2];
+        if (luminance / (pixels.length / 4) < 9) onSceneUnavailable('The 3D canvas rendered black in this browser, so the rack elevation fallback is shown.');
+      } catch (error) {
+        onSceneUnavailable('3D rendering could not be verified, so the rack elevation fallback is shown.');
+      }
+    };
+    const onContextLost = (event: Event): void => {
+      event.preventDefault();
+      onSceneUnavailable('3D rendering lost its WebGL context, so the rack elevation fallback is shown.');
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
     const animate = (): void => {
       if (focusActiveRef.current) {
         camera.position.lerp(cameraTargetRef.current, 0.055);
@@ -527,6 +559,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       try {
         controls.update();
         renderer.render(scene, camera);
+        reportBlackFrameIfNeeded();
         frameId = window.requestAnimationFrame(animate);
       } catch (error) {
         focusActiveRef.current = false;
@@ -541,6 +574,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
