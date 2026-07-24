@@ -112,32 +112,111 @@ const centerObject = (object: THREE.Object3D): void => {
   object.position.sub(center);
 };
 
-const getBounds = (object: THREE.Object3D): { box: THREE.Box3; size: THREE.Vector3; center: THREE.Vector3 } => {
-  object.updateWorldMatrix(true, true);
-  const box = new THREE.Box3().setFromObject(object, true);
+const stackEpsilon = 0.0001;
+const stackNodeNames = ['STACK_BODY', 'STACK_BOUNDS'];
+
+interface IStackMetrics {
+  stackNode: THREE.Object3D;
+  box: THREE.Box3;
+  size: THREE.Vector3;
+  center: THREE.Vector3;
+  bottomY: number;
+  topY: number;
+  height: number;
+}
+
+const isStackNodeName = (name: string): boolean => stackNodeNames.some((stackName) => name === stackName || name.startsWith(`${stackName}_`));
+
+const findStackNode = (panel: THREE.Object3D): THREE.Object3D => {
+  let result: THREE.Object3D | undefined;
+  panel.traverse((child) => {
+    if (result) return;
+    const name = (child.name || '').toUpperCase();
+    if (isStackNodeName(name)) result = child;
+  });
+  if (!result) throw new Error(`Kein STACK_BODY oder STACK_BOUNDS in "${panel.name || 'panel'}" gefunden.`);
+  return result;
+};
+
+const getWorldBox = (node: THREE.Object3D): THREE.Box3 => {
+  node.updateWorldMatrix(true, true);
+  const worldBox = new THREE.Box3();
+  node.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.geometry) return;
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    if (!mesh.geometry.boundingBox) return;
+    worldBox.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld));
+  });
+  if (worldBox.isEmpty()) throw new Error(`Keine Geometrie in "${node.name || 'stack node'}" gefunden.`);
+  return worldBox;
+};
+
+const getStackMetrics = (panel: THREE.Object3D): IStackMetrics => {
+  const stackNode = findStackNode(panel);
+  const box = getWorldBox(stackNode);
   const size = new THREE.Vector3();
   const center = new THREE.Vector3();
   box.getSize(size);
   box.getCenter(center);
-  return { box, size, center };
+  return {
+    stackNode,
+    box,
+    size,
+    center,
+    bottomY: box.min.y,
+    topY: box.max.y,
+    height: size.y
+  };
 };
 
-const stackPanels = (panels: THREE.Object3D[], options: { baseY?: number; gap?: number; centerX?: number; centerZ?: number } = {}): void => {
-  const { baseY = 0, gap = 0, centerX = 0, centerZ = 0 } = options;
-  let previousTopY = baseY - gap;
+const translateInWorldSpace = (object: THREE.Object3D, deltaWorld: THREE.Vector3): void => {
+  object.updateWorldMatrix(true, false);
+  const newWorldPosition = object.getWorldPosition(new THREE.Vector3()).add(deltaWorld);
+  if (object.parent) {
+    object.parent.updateWorldMatrix(true, false);
+    object.parent.worldToLocal(newWorldPosition);
+  }
+  object.position.copy(newWorldPosition);
+  object.updateWorldMatrix(true, true);
+};
 
-  panels.forEach((panel) => {
-    let bounds = getBounds(panel);
-    const targetBottomY = previousTopY + gap;
+const stackPanels = (panels: THREE.Object3D[], options: { baseY?: number; gap?: number; targetCenterX?: number; targetCenterZ?: number } = {}): THREE.Box3 => {
+  const { baseY = 0, gap = 0, targetCenterX = 0, targetCenterZ = 0 } = options;
+  const stackedBodyBox = new THREE.Box3();
+  let previousTopY: number | undefined;
 
-    panel.position.x += centerX - bounds.center.x;
-    panel.position.y += targetBottomY - bounds.box.min.y;
-    panel.position.z += centerZ - bounds.center.z;
+  panels.forEach((panel, index) => {
+    let metrics = getStackMetrics(panel);
+    const targetBottomY = index === 0 || previousTopY === undefined ? baseY : previousTopY + gap;
 
-    panel.updateWorldMatrix(true, true);
-    bounds = getBounds(panel);
-    previousTopY = bounds.box.max.y;
+    translateInWorldSpace(panel, new THREE.Vector3(
+      targetCenterX - metrics.center.x,
+      targetBottomY - metrics.bottomY,
+      targetCenterZ - metrics.center.z
+    ));
+
+    metrics = getStackMetrics(panel);
+    const actualGap = previousTopY === undefined ? undefined : metrics.bottomY - previousTopY;
+    const fullVisualBox = new THREE.Box3().setFromObject(panel, true);
+    // Debug output deliberately compares body-only stacking with the complete
+    // visual box, so studs/logos can overlap while body edges stay flush.
+    console.log({
+      panel: panel.name,
+      bodyMin: metrics.box.min.toArray(),
+      bodyMax: metrics.box.max.toArray(),
+      bodyHeight: metrics.height,
+      actualBodyGap: actualGap,
+      gapCorrect: actualGap === undefined || Math.abs(actualGap - gap) <= stackEpsilon,
+      fullVisualMin: fullVisualBox.min.toArray(),
+      fullVisualMax: fullVisualBox.max.toArray()
+    });
+    if (metrics.stackNode.name.toUpperCase().startsWith('STACK_BOUNDS')) metrics.stackNode.visible = false;
+    stackedBodyBox.union(metrics.box);
+    previousTopY = metrics.topY;
   });
+
+  return stackedBodyBox;
 };
 
 /** Fit a rack GLB without stretching the authored proportions. */
@@ -376,11 +455,11 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
               deviceModel.add(panel);
               panels.push(panel);
             }
-            stackPanels(panels);
-            const stackedBounds = getBounds(deviceModel);
+            const stackedBounds = stackPanels(panels, { baseY: 0, gap: 0, targetCenterX: 0, targetCenterZ: 0 });
+            const stackedCenter = stackedBounds.getCenter(new THREE.Vector3());
             deviceModel.position.set(
               xForSlot(device.MountWidth, device.HorizontalSlot),
-              yForDevice(rack, device) - stackedBounds.center.y,
+              yForDevice(rack, device) - stackedCenter.y,
               zForSide(device, selected)
             );
             rackGroup.add(deviceModel);
