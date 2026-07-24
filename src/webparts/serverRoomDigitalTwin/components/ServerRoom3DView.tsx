@@ -31,6 +31,7 @@ const nativeRackUnitHeight = standardRackHeight / standardRackUnits;
 const panelDepth = rackDepth / 2;
 const panelCenterOffset = rackDepth / 4;
 const panelEdgeGap = 0.006;
+const panelVerticalFillFactor = 1.1;
 
 const deviceColors: { [key: string]: number } = {
   Backup: 0x6f0013,
@@ -111,6 +112,140 @@ const centerObject = (object: THREE.Object3D): void => {
   object.position.sub(center);
 };
 
+const stackEpsilon = 0.0001;
+const stackNodeNames = ['STACK_BODY', 'STACK_BOUNDS'];
+
+interface IStackMetrics {
+  stackNode: THREE.Object3D;
+  box: THREE.Box3;
+  size: THREE.Vector3;
+  center: THREE.Vector3;
+  bottomY: number;
+  topY: number;
+  height: number;
+}
+
+const isStackNodeName = (name: string): boolean => stackNodeNames.some((stackName) => name === stackName || name.startsWith(`${stackName}_`));
+
+const findStackNode = (panel: THREE.Object3D): THREE.Object3D => {
+  let result: THREE.Object3D | undefined;
+  panel.traverse((child) => {
+    if (result) return;
+    const name = (child.name || '').toUpperCase();
+    if (isStackNodeName(name)) result = child;
+  });
+  if (!result) throw new Error(`Kein STACK_BODY oder STACK_BOUNDS in "${panel.name || 'panel'}" gefunden.`);
+  return result;
+};
+
+const getWorldBox = (node: THREE.Object3D): THREE.Box3 => {
+  node.updateWorldMatrix(true, true);
+  const worldBox = new THREE.Box3();
+  node.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.geometry) return;
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    if (!mesh.geometry.boundingBox) return;
+    worldBox.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld));
+  });
+  if (worldBox.isEmpty()) throw new Error(`Keine Geometrie in "${node.name || 'stack node'}" gefunden.`);
+  return worldBox;
+};
+
+const getStackMetrics = (panel: THREE.Object3D): IStackMetrics => {
+  const stackNode = findStackNode(panel);
+  const box = getWorldBox(stackNode);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+  return {
+    stackNode,
+    box,
+    size,
+    center,
+    bottomY: box.min.y,
+    topY: box.max.y,
+    height: size.y
+  };
+};
+
+const translateInWorldSpace = (object: THREE.Object3D, deltaWorld: THREE.Vector3): void => {
+  object.updateWorldMatrix(true, false);
+  const newWorldPosition = object.getWorldPosition(new THREE.Vector3()).add(deltaWorld);
+  if (object.parent) {
+    object.parent.updateWorldMatrix(true, false);
+    object.parent.worldToLocal(newWorldPosition);
+  }
+  object.position.copy(newWorldPosition);
+  object.updateWorldMatrix(true, true);
+};
+
+const stackPanels = (panels: THREE.Object3D[], options: { baseY?: number; gap?: number; targetCenterX?: number; targetCenterZ?: number } = {}): THREE.Box3 => {
+  const { baseY = 0, gap = 0, targetCenterX = 0, targetCenterZ = 0 } = options;
+  const stackedBodyBox = new THREE.Box3();
+  let previousTopY: number | undefined;
+
+  panels.forEach((panel, index) => {
+    let metrics = getStackMetrics(panel);
+    const targetBottomY = index === 0 || previousTopY === undefined ? baseY : previousTopY + gap;
+
+    translateInWorldSpace(panel, new THREE.Vector3(
+      targetCenterX - metrics.center.x,
+      targetBottomY - metrics.bottomY,
+      targetCenterZ - metrics.center.z
+    ));
+
+    metrics = getStackMetrics(panel);
+    const actualGap = previousTopY === undefined ? undefined : metrics.bottomY - previousTopY;
+    const fullVisualBox = new THREE.Box3().setFromObject(panel, true);
+    // Debug output deliberately compares body-only stacking with the complete
+    // visual box, so studs/logos can overlap while body edges stay flush.
+    console.log({
+      panel: panel.name,
+      bodyMin: metrics.box.min.toArray(),
+      bodyMax: metrics.box.max.toArray(),
+      bodyHeight: metrics.height,
+      actualBodyGap: actualGap,
+      gapCorrect: actualGap === undefined || Math.abs(actualGap - gap) <= stackEpsilon,
+      fullVisualMin: fullVisualBox.min.toArray(),
+      fullVisualMax: fullVisualBox.max.toArray()
+    });
+    if (metrics.stackNode.name.toUpperCase().startsWith('STACK_BOUNDS')) metrics.stackNode.visible = false;
+    stackedBodyBox.union(metrics.box);
+    previousTopY = metrics.topY;
+  });
+
+  return stackedBodyBox;
+};
+
+const fitStackToRackInterior = (rack: IRack, device: IDevice, stackedBodyBox: THREE.Box3, desiredY: number): number => {
+  const rackInnerBottomY = -rackHeightFor(rack) / 2;
+  const rackInnerTopY = rackHeightFor(rack) / 2;
+  const usableRackHeight = rackInnerTopY - rackInnerBottomY;
+  const totalStackHeight = stackedBodyBox.max.y - stackedBodyBox.min.y;
+
+  if (totalStackHeight > usableRackHeight + stackEpsilon) {
+    console.warn('Stack does not fit into rack interior height.', {
+      device: device.Title,
+      rack: rack.Title,
+      usableRackHeight,
+      totalStackHeight,
+      overflow: totalStackHeight - usableRackHeight
+    });
+    return desiredY;
+  }
+
+  let fittedY = desiredY;
+  const topOverflow = stackedBodyBox.max.y + fittedY - rackInnerTopY;
+  if (topOverflow > stackEpsilon) fittedY -= topOverflow;
+
+  const bottomOverflow = rackInnerBottomY - (stackedBodyBox.min.y + fittedY);
+  if (bottomOverflow > stackEpsilon) fittedY += bottomOverflow;
+
+  return fittedY;
+};
+
 /** Fit a rack GLB without stretching the authored proportions. */
 const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D => {
   // Face the cabinet openings towards the front/rear device planes.
@@ -127,68 +262,30 @@ const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D =
   return rackModel;
 };
 
-/** Fit one panel into one U, spanning rack width and running from the rack edge to its centre. */
-const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THREE.Object3D => {
-  // The Spline panel assets must read like horizontal rack blades: their wide
-  // face sits across the rack, while the short depth begins at the front/rear
-  // cabinet edge and ends at the rack centre. Scale each axis to the physical
-  // rack slot instead of preserving the previous side-on GLB proportions.
+/** Orient one authored Spline panel as a rack blade without changing its proportions. */
+const preparePanelModel = (object: THREE.Object3D): THREE.Object3D => {
+  // The exported panel GLBs already contain the intended proportions, colors
+  // and surface details. Only rotate the authored long axis across the rack and
+  // center the object; slot positioning and U stacking happen on the wrapper.
+  object.rotation.y = Math.PI / 2;
   centerObject(object);
-  const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const panel = new THREE.Group();
   panel.add(object);
-  panel.scale.set(
-    (widthForMount(mountWidth) - panelEdgeGap * 2) / Math.max(size.x, 0.001),
-    rackUnitHeight() / Math.max(size.y, 0.001),
-    (panelDepth - panelEdgeGap * 2) / Math.max(size.z, 0.001)
-  );
   return panel;
 };
 
-const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
-  if (!source) return source;
-  const material = source.clone() as THREE.MeshStandardMaterial;
-  material.metalness = Math.max(material.metalness || 0, 0.2);
-  material.roughness = Math.min(material.roughness || 0.5, 0.36);
-  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.86 : 0.7);
-  if (material.emissive) {
-    material.emissive = new THREE.Color(selected ? color : 0x000000);
-    material.emissiveIntensity = selected ? 0.42 : 0.06;
-  }
-  return material;
-};
-
-
-const polishRackObject = (object: THREE.Object3D, selected: boolean): void => {
+const enableModelShadows = (object: THREE.Object3D): void => {
   object.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    const applyRackMaterial = (source: THREE.Material): THREE.Material => {
-      const material = source.clone() as THREE.MeshStandardMaterial;
-      if (material.color) material.color.lerp(new THREE.Color(selected ? 0x7a8294 : 0x454b55), selected ? 0.56 : 0.42);
-      material.transparent = true;
-      material.opacity = Math.min(material.opacity || 1, 0.72);
-      material.metalness = Math.max(material.metalness || 0, 0.68);
-      material.roughness = Math.min(material.roughness || 0.5, 0.2);
-      return material;
-    };
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => applyRackMaterial(material))
-      : applyRackMaterial(mesh.material as THREE.Material);
-  });
-};
-
-const tintObject = (object: THREE.Object3D, color: number, selected: boolean): void => {
-  object.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => tintMaterial(material, color, selected) || material)
-      : tintMaterial(mesh.material as THREE.Material, color, selected) || mesh.material;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material as THREE.Material];
+    materials.forEach((material) => {
+      material.depthTest = true;
+      material.depthWrite = true;
+      if ((material as THREE.MeshStandardMaterial).opacity === 1) material.transparent = false;
+    });
   });
 };
 
@@ -360,7 +457,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
           const preparedRack = prepareRackModel(object, rack);
-          polishRackObject(preparedRack, rackSelected);
+          enableModelShadows(preparedRack);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
           primitiveRack.visible = false;
@@ -376,22 +473,27 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           try {
-            const preparedPanel = preparePanelModel(object, device.MountWidth);
+            const preparedPanel = preparePanelModel(object);
             const deviceModel = new THREE.Group();
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
             // A panel model represents one rack pitch. Multi-U devices are
-            // assembled from repeated 1U panels, and each next panel starts at
-            // the exact next U so a full 42U stack has no artificial spacing.
+            // assembled from repeated authored panels. Bounds-based stacking
+            // places each next panel exactly on top of the previous model.
+            const panels: THREE.Object3D[] = [];
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
-              tintObject(panel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
-              panel.position.y = unitOffset * rackUnitHeight();
+              enableModelShadows(panel);
+              if (device.RackSide === 'Rear') panel.rotation.y = Math.PI;
               deviceModel.add(panel);
+              panels.push(panel);
             }
+            const stackedBounds = stackPanels(panels, { baseY: 0, gap: 0, targetCenterX: 0, targetCenterZ: 0 });
+            const stackedCenter = stackedBounds.getCenter(new THREE.Vector3());
+            const desiredY = yForDevice(rack, device) - stackedCenter.y;
             deviceModel.position.set(
               xForSlot(device.MountWidth, device.HorizontalSlot),
-              yForDevice(rack, { ...device, UHeight: 1 }),
+              fitStackToRackInterior(rack, device, stackedBounds, desiredY),
               zForSide(device, selected)
             );
             rackGroup.add(deviceModel);
