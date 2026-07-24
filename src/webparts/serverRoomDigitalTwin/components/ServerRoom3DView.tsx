@@ -112,6 +112,34 @@ const centerObject = (object: THREE.Object3D): void => {
   object.position.sub(center);
 };
 
+const getBounds = (object: THREE.Object3D): { box: THREE.Box3; size: THREE.Vector3; center: THREE.Vector3 } => {
+  object.updateWorldMatrix(true, true);
+  const box = new THREE.Box3().setFromObject(object, true);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+  return { box, size, center };
+};
+
+const stackPanels = (panels: THREE.Object3D[], options: { baseY?: number; gap?: number; centerX?: number; centerZ?: number } = {}): void => {
+  const { baseY = 0, gap = 0, centerX = 0, centerZ = 0 } = options;
+  let previousTopY = baseY - gap;
+
+  panels.forEach((panel) => {
+    let bounds = getBounds(panel);
+    const targetBottomY = previousTopY + gap;
+
+    panel.position.x += centerX - bounds.center.x;
+    panel.position.y += targetBottomY - bounds.box.min.y;
+    panel.position.z += centerZ - bounds.center.z;
+
+    panel.updateWorldMatrix(true, true);
+    bounds = getBounds(panel);
+    previousTopY = bounds.box.max.y;
+  });
+};
+
 /** Fit a rack GLB without stretching the authored proportions. */
 const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D => {
   // Face the cabinet openings towards the front/rear device planes.
@@ -338,18 +366,21 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
             // A panel model represents one rack pitch. Multi-U devices are
-            // assembled from repeated 1U panels, and each next panel starts at
-            // the exact next U so a full 42U stack has no artificial spacing.
+            // assembled from repeated authored panels. Bounds-based stacking
+            // places each next panel exactly on top of the previous model.
+            const panels: THREE.Object3D[] = [];
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
               enableModelShadows(panel);
               if (device.RackSide === 'Rear') panel.rotation.y = Math.PI;
-              panel.position.y = unitOffset * rackUnitHeight();
               deviceModel.add(panel);
+              panels.push(panel);
             }
+            stackPanels(panels);
+            const stackedBounds = getBounds(deviceModel);
             deviceModel.position.set(
               xForSlot(device.MountWidth, device.HorizontalSlot),
-              yForDevice(rack, { ...device, UHeight: 1 }),
+              yForDevice(rack, device) - stackedBounds.center.y,
               zForSide(device, selected)
             );
             rackGroup.add(deviceModel);
