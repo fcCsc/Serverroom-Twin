@@ -31,6 +31,7 @@ const nativeRackUnitHeight = standardRackHeight / standardRackUnits;
 const panelDepth = rackDepth / 2;
 const panelCenterOffset = rackDepth / 4;
 const panelEdgeGap = 0.006;
+const panelVerticalFillFactor = 1.1;
 
 const deviceColors: { [key: string]: number } = {
   Backup: 0x6f0013,
@@ -80,6 +81,20 @@ const widthForMount = (mountWidth: MountWidth): number => rackInteriorWidth / sl
 const rackHeightFor = (rack: IRack): number => standardRackHeight * Math.max(1, rack.RackHeightU) / standardRackUnits;
 const rackUnitHeight = (): number => nativeRackUnitHeight;
 
+interface IRackMountArea {
+  mountBottomY: number;
+  mountTopY: number;
+  unitHeight: number;
+}
+
+/** Rack-local 42U rail coordinates; cabinet roof geometry is not a slot reference. */
+const mountAreaFor = (rack: IRack): IRackMountArea => {
+  const rackUnits = Math.max(1, rack.RackHeightU);
+  const unitHeight = rackUnitHeight();
+  const mountBottomY = -rackHeightFor(rack) / 2;
+  return { mountBottomY, mountTopY: mountBottomY + rackUnits * unitHeight, unitHeight };
+};
+
 const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
   const slots = slotCountByMountWidth[mountWidth];
   const slot = Math.max(1, Math.min(horizontalSlot, slots));
@@ -87,10 +102,29 @@ const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
   return -rackInteriorWidth / 2 + segment / 2 + (slot - 1) * segment;
 };
 
+const xForSlotInRackBounds = (mountWidth: MountWidth, horizontalSlot: number, rackInnerBounds: THREE.Box3): number => {
+  const slots = slotCountByMountWidth[mountWidth];
+  const slot = Math.max(1, Math.min(horizontalSlot, slots));
+  const segment = (rackInnerBounds.max.x - rackInnerBounds.min.x) / slots;
+  return rackInnerBounds.min.x + segment / 2 + (slot - 1) * segment;
+};
+
 const yForDevice = (rack: IRack, device: IDevice): number => {
-  const unitHeight = rackUnitHeight();
-  const centerU = device.UPosition + device.UHeight / 2 - 1;
-  return -rackHeightFor(rack) / 2 + centerU * unitHeight;
+  const { mountTopY, unitHeight } = mountAreaFor(rack);
+  const highestValidStart = Math.max(1, rack.RackHeightU - device.UHeight + 1);
+  const normalizedUPosition = THREE.MathUtils.clamp(device.UPosition, 1, highestValidStart);
+  const slotIndexFromTop = rack.RackHeightU - normalizedUPosition - device.UHeight + 1;
+
+  if (normalizedUPosition !== device.UPosition) {
+    console.warn('Device U position is outside the rack mount area; using the nearest valid slot.', {
+      rack: rack.Title,
+      device: device.Title,
+      requestedUPosition: device.UPosition,
+      normalizedUPosition
+    });
+  }
+
+  return mountTopY - (slotIndexFromTop + device.UHeight / 2) * unitHeight;
 };
 
 const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight * panelVerticalFillFactor, 0.045);
@@ -105,10 +139,99 @@ const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number 
 
 const activeRackSide = (devices: IDevice[]): 'Front' | 'Rear' => devices.some((device) => device.RackSide === 'Rear') && !devices.some((device) => device.RackSide === 'Front') ? 'Rear' : 'Front';
 
+const validateDeviceURanges = (devices: IDevice[]): void => {
+  const occupied: { [rackAndRow: string]: { [unit: number]: string | undefined } | undefined } = {};
+  devices.forEach((device) => {
+    const lastU = device.UPosition + device.UHeight - 1;
+    if (device.UPosition < 1 || device.UHeight < 1 || lastU > standardRackUnits) {
+      throw new Error(`Device "${device.Title}" has invalid U range ${device.UPosition}-${lastU}.`);
+    }
+    const rackAndRow = `${device.RackKey}:${device.RackSide}`;
+    const row = occupied[rackAndRow] || (occupied[rackAndRow] = {});
+    for (let unit = device.UPosition; unit <= lastU; unit++) {
+      if (row[unit]) throw new Error(`Devices "${row[unit]}" and "${device.Title}" overlap at U${unit} in ${rackAndRow}.`);
+      row[unit] = device.Title;
+    }
+  });
+};
+
 
 const centerObject = (object: THREE.Object3D): void => {
   const center = new THREE.Box3().setFromObject(object).getCenter(new THREE.Vector3());
   object.position.sub(center);
+};
+
+const getWorldBox = (node: THREE.Object3D): THREE.Box3 => {
+  node.updateWorldMatrix(true, true);
+  const worldBox = new THREE.Box3();
+  node.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (!mesh.isMesh || !mesh.geometry) return;
+    if (!mesh.geometry.boundingBox) mesh.geometry.computeBoundingBox();
+    if (!mesh.geometry.boundingBox) return;
+    worldBox.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld));
+  });
+  if (worldBox.isEmpty()) throw new Error(`Keine Geometrie in "${node.name || 'bounds marker'}" gefunden.`);
+  return worldBox;
+};
+
+const boxInLocalSpace = (worldBox: THREE.Box3, localRoot: THREE.Object3D): THREE.Box3 => {
+  localRoot.updateWorldMatrix(true, true);
+  const localBox = new THREE.Box3();
+  for (const x of [worldBox.min.x, worldBox.max.x]) {
+    for (const y of [worldBox.min.y, worldBox.max.y]) {
+      for (const z of [worldBox.min.z, worldBox.max.z]) {
+        localBox.expandByPoint(localRoot.worldToLocal(new THREE.Vector3(x, y, z)));
+      }
+    }
+  }
+  return localBox;
+};
+
+interface IRackPlacementReferences {
+  box: THREE.Box3;
+  markerUuid: string;
+  rackBottomY: number;
+  rackTopY: number;
+  uHeight: number;
+}
+
+const markerYInRack = (marker: THREE.Object3D, rackGroup: THREE.Object3D): number => {
+  rackGroup.updateWorldMatrix(true, true);
+  marker.updateWorldMatrix(true, false);
+  return rackGroup.worldToLocal(marker.getWorldPosition(new THREE.Vector3())).y;
+};
+
+const rackInnerBoundsFor = (rackModel: THREE.Object3D, rackGroup: THREE.Object3D, rack: IRack): IRackPlacementReferences => {
+  const marker = rackModel.getObjectByName('RACK_INNER_BOUNDS');
+  if (!marker) throw new Error(`Rack "${rack.Title}" is missing RACK_INNER_BOUNDS.`);
+  const bottomMarker = rackModel.getObjectByName('RACK_U_BOTTOM');
+  const topMarker = rackModel.getObjectByName('RACK_U_TOP');
+  if (!bottomMarker || !topMarker) throw new Error(`Rack "${rack.Title}" is missing RACK_U_BOTTOM or RACK_U_TOP.`);
+  rackGroup.updateWorldMatrix(true, true);
+  const box = boxInLocalSpace(getWorldBox(marker), rackGroup);
+  const rackBottomY = markerYInRack(bottomMarker, rackGroup);
+  const rackTopY = markerYInRack(topMarker, rackGroup);
+  if (rackTopY <= rackBottomY) throw new Error(`Rack "${rack.Title}" has an invalid 42U marker range.`);
+  marker.visible = false;
+  bottomMarker.visible = false;
+  topMarker.visible = false;
+  const uHeight = (rackTopY - rackBottomY) / standardRackUnits;
+  console.log({ rack: rack.Title, markerUuid: marker.uuid, rackInnerMin: box.min.toArray(), rackInnerMax: box.max.toArray(), rackBottomY, rackTopY, uHeight });
+  return { box, markerUuid: marker.uuid, rackBottomY, rackTopY, uHeight };
+};
+
+const alignPanelsToUnitGrid = (panels: THREE.Object3D[], deviceModel: THREE.Object3D, uHeight: number, device: IDevice): void => {
+  panels.forEach((panel, unitOffset) => {
+    const anchor = panel.getObjectByName('U_BOTTOM_ANCHOR');
+    if (!anchor) throw new Error(`Device "${device.Title}" is missing U_BOTTOM_ANCHOR.`);
+    deviceModel.updateWorldMatrix(true, true);
+    anchor.updateWorldMatrix(true, false);
+    const anchorInDevice = deviceModel.worldToLocal(anchor.getWorldPosition(new THREE.Vector3()));
+    panel.position.y += unitOffset * uHeight - anchorInDevice.y;
+    panel.updateWorldMatrix(true, true);
+    anchor.visible = false;
+  });
 };
 
 /** Fit a rack GLB without stretching the authored proportions. */
@@ -127,68 +250,30 @@ const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D =
   return rackModel;
 };
 
-/** Fit one panel into one U, spanning rack width and running from the rack edge to its centre. */
-const preparePanelModel = (object: THREE.Object3D, mountWidth: MountWidth): THREE.Object3D => {
-  // The Spline panel assets must read like horizontal rack blades: their wide
-  // face sits across the rack, while the short depth begins at the front/rear
-  // cabinet edge and ends at the rack centre. Scale each axis to the physical
-  // rack slot instead of preserving the previous side-on GLB proportions.
+/** Orient one authored Spline panel as a rack blade without changing its proportions. */
+const preparePanelModel = (object: THREE.Object3D): THREE.Object3D => {
+  // The exported panel GLBs already contain the intended proportions, colors
+  // and surface details. Only rotate the authored long axis across the rack and
+  // center the object; slot positioning and U stacking happen on the wrapper.
+  object.rotation.y = Math.PI / 2;
   centerObject(object);
-  const size = new THREE.Box3().setFromObject(object).getSize(new THREE.Vector3());
   const panel = new THREE.Group();
   panel.add(object);
-  panel.scale.set(
-    (widthForMount(mountWidth) - panelEdgeGap * 2) / Math.max(size.x, 0.001),
-    rackUnitHeight() / Math.max(size.y, 0.001),
-    (panelDepth - panelEdgeGap * 2) / Math.max(size.z, 0.001)
-  );
   return panel;
 };
 
-const tintMaterial = (source: THREE.Material | undefined, color: number, selected: boolean): THREE.Material | undefined => {
-  if (!source) return source;
-  const material = source.clone() as THREE.MeshStandardMaterial;
-  material.metalness = Math.max(material.metalness || 0, 0.2);
-  material.roughness = Math.min(material.roughness || 0.5, 0.36);
-  if (material.color) material.color.lerp(new THREE.Color(color), selected ? 0.86 : 0.7);
-  if (material.emissive) {
-    material.emissive = new THREE.Color(selected ? color : 0x000000);
-    material.emissiveIntensity = selected ? 0.42 : 0.06;
-  }
-  return material;
-};
-
-
-const polishRackObject = (object: THREE.Object3D, selected: boolean): void => {
+const enableModelShadows = (object: THREE.Object3D): void => {
   object.traverse((child) => {
     const mesh = child as THREE.Mesh;
     if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    const applyRackMaterial = (source: THREE.Material): THREE.Material => {
-      const material = source.clone() as THREE.MeshStandardMaterial;
-      if (material.color) material.color.lerp(new THREE.Color(selected ? 0x7a8294 : 0x454b55), selected ? 0.56 : 0.42);
-      material.transparent = true;
-      material.opacity = Math.min(material.opacity || 1, 0.72);
-      material.metalness = Math.max(material.metalness || 0, 0.68);
-      material.roughness = Math.min(material.roughness || 0.5, 0.2);
-      return material;
-    };
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => applyRackMaterial(material))
-      : applyRackMaterial(mesh.material as THREE.Material);
-  });
-};
-
-const tintObject = (object: THREE.Object3D, color: number, selected: boolean): void => {
-  object.traverse((child) => {
-    const mesh = child as THREE.Mesh;
-    if (!mesh.isMesh) return;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    mesh.material = Array.isArray(mesh.material)
-      ? mesh.material.map((material) => tintMaterial(material, color, selected) || material)
-      : tintMaterial(mesh.material as THREE.Material, color, selected) || mesh.material;
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material as THREE.Material];
+    materials.forEach((material) => {
+      material.depthTest = true;
+      material.depthWrite = true;
+      if ((material as THREE.MeshStandardMaterial).opacity === 1) material.transparent = false;
+    });
   });
 };
 
@@ -305,6 +390,16 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
       };
     }
+    try {
+      validateDeviceURanges(devices);
+    } catch (error) {
+      onSceneUnavailable(error instanceof Error ? error.message : 'Rack device U metadata is invalid.');
+      return () => {
+        disposed = true;
+        renderer.dispose();
+        if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
+      };
+    }
 
     const minX = Math.min(...racks.map((rack) => rack.XPosition));
     const maxX = Math.max(...racks.map((rack) => rack.XPosition));
@@ -345,6 +440,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     scene.add(roomGroup);
     rackObjectsRef.current = {};
     deviceObjectsRef.current = {};
+    const rackInnerBoundsByKey: { [rackKey: string]: IRackPlacementReferences | undefined } = {};
+    const pendingDevicePlacements: { [rackKey: string]: Array<(bounds: IRackPlacementReferences) => void> | undefined } = {};
 
     racks.forEach((rack) => {
       const rackSelected = selectedRackKey === rack.RackKey && !selectedDeviceKey;
@@ -360,12 +457,18 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       loadAsset(rack.ModelAssetKey, (object) => {
         try {
           const preparedRack = prepareRackModel(object, rack);
-          polishRackObject(preparedRack, rackSelected);
+          enableModelShadows(preparedRack);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
+          const innerBounds = rackInnerBoundsFor(rackModel, rackGroup, rack);
+          rackInnerBoundsByKey[rack.RackKey] = innerBounds;
+          (pendingDevicePlacements[rack.RackKey] || []).forEach((placeDevice) => placeDevice(innerBounds));
+          pendingDevicePlacements[rack.RackKey] = [];
           primitiveRack.visible = false;
         } catch (error) {
-          primitiveRack.visible = true;
+          console.error(error);
+          primitiveRack.visible = false;
+          onSceneUnavailable(error instanceof Error ? error.message : `Rack "${rack.Title}" could not provide its interior bounds.`);
         }
       });
 
@@ -376,28 +479,52 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         deviceObjectsRef.current[device.DeviceKey] = primitiveDevice;
         loadAsset(device.ModelAssetKey, (object) => {
           try {
-            const preparedPanel = preparePanelModel(object, device.MountWidth);
+            const preparedPanel = preparePanelModel(object);
             const deviceModel = new THREE.Group();
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
             // A panel model represents one rack pitch. Multi-U devices are
-            // assembled from repeated 1U panels, and each next panel starts at
-            // the exact next U so a full 42U stack has no artificial spacing.
+            // assembled from repeated authored panels, then each authored
+            // bottom anchor is aligned to the rack's exact local U grid.
+            const panels: THREE.Object3D[] = [];
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
-              tintObject(panel, deviceColors[device.DeviceType] || 0x7aa8ff, selected);
-              panel.position.y = unitOffset * rackUnitHeight();
+              enableModelShadows(panel);
+              if (device.RackSide === 'Rear') panel.rotation.y = Math.PI;
               deviceModel.add(panel);
+              panels.push(panel);
             }
-            deviceModel.position.set(
-              xForSlot(device.MountWidth, device.HorizontalSlot),
-              yForDevice(rack, { ...device, UHeight: 1 }),
-              zForSide(device, selected)
-            );
-            rackGroup.add(deviceModel);
-            deviceObjectsRef.current[device.DeviceKey] = deviceModel;
-            primitiveDevice.visible = false;
+            const placeDevice = (innerBounds: IRackPlacementReferences): void => {
+              if (device.UPosition < 1 || device.UPosition + device.UHeight - 1 > standardRackUnits) {
+                throw new Error(`Device "${device.Title}" has invalid U range ${device.UPosition}-${device.UPosition + device.UHeight - 1}.`);
+              }
+              alignPanelsToUnitGrid(panels, deviceModel, innerBounds.uHeight, device);
+              const x = xForSlotInRackBounds(device.MountWidth, device.HorizontalSlot, innerBounds.box);
+              const z = zForSide(device, false);
+              const targetBottomY = innerBounds.rackBottomY + (device.UPosition - 1) * innerBounds.uHeight;
+              const deviceTopY = targetBottomY + device.UHeight * innerBounds.uHeight;
+              deviceModel.position.set(x, targetBottomY, z);
+              rackGroup.add(deviceModel);
+              deviceObjectsRef.current[device.DeviceKey] = deviceModel;
+              primitiveDevice.visible = false;
+              console.log({
+                rack: rack.Title,
+                device: device.Title,
+                startU: device.UPosition,
+                units: device.UHeight,
+                targetBottomY,
+                deviceTopY,
+                localX: x,
+                localY: targetBottomY,
+                localZ: z,
+                row: device.RackSide.toLowerCase()
+              });
+            };
+            const innerBounds = rackInnerBoundsByKey[rack.RackKey];
+            if (innerBounds) placeDevice(innerBounds);
+            else (pendingDevicePlacements[rack.RackKey] || (pendingDevicePlacements[rack.RackKey] = [])).push(placeDevice);
           } catch (error) {
+            console.error(error);
             primitiveDevice.visible = true;
           }
         });
