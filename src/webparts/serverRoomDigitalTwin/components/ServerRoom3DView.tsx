@@ -161,6 +161,32 @@ const centerObject = (object: THREE.Object3D): void => {
   object.position.sub(center);
 };
 
+const stackEpsilon = 0.0001;
+const stackNodeNames = ['STACK_BODY', 'STACK_BOUNDS'];
+
+interface IStackMetrics {
+  stackNode: THREE.Object3D;
+  box: THREE.Box3;
+  size: THREE.Vector3;
+  center: THREE.Vector3;
+  bottomY: number;
+  topY: number;
+  height: number;
+}
+
+const isStackNodeName = (name: string): boolean => stackNodeNames.some((stackName) => name === stackName || name.startsWith(`${stackName}_`));
+
+const findStackNode = (panel: THREE.Object3D): THREE.Object3D => {
+  let result: THREE.Object3D | undefined;
+  panel.traverse((child) => {
+    if (result) return;
+    const name = (child.name || '').toUpperCase();
+    if (isStackNodeName(name)) result = child;
+  });
+  if (!result) throw new Error(`Kein STACK_BODY oder STACK_BOUNDS in "${panel.name || 'panel'}" gefunden.`);
+  return result;
+};
+
 const getWorldBox = (node: THREE.Object3D): THREE.Box3 => {
   node.updateWorldMatrix(true, true);
   const worldBox = new THREE.Box3();
@@ -171,67 +197,75 @@ const getWorldBox = (node: THREE.Object3D): THREE.Box3 => {
     if (!mesh.geometry.boundingBox) return;
     worldBox.union(mesh.geometry.boundingBox.clone().applyMatrix4(mesh.matrixWorld));
   });
-  if (worldBox.isEmpty()) throw new Error(`Keine Geometrie in "${node.name || 'bounds marker'}" gefunden.`);
+  if (worldBox.isEmpty()) throw new Error(`Keine Geometrie in "${node.name || 'stack node'}" gefunden.`);
   return worldBox;
 };
 
-const boxInLocalSpace = (worldBox: THREE.Box3, localRoot: THREE.Object3D): THREE.Box3 => {
-  localRoot.updateWorldMatrix(true, true);
-  const localBox = new THREE.Box3();
-  for (const x of [worldBox.min.x, worldBox.max.x]) {
-    for (const y of [worldBox.min.y, worldBox.max.y]) {
-      for (const z of [worldBox.min.z, worldBox.max.z]) {
-        localBox.expandByPoint(localRoot.worldToLocal(new THREE.Vector3(x, y, z)));
-      }
-    }
+const getStackMetrics = (panel: THREE.Object3D): IStackMetrics => {
+  const stackNode = findStackNode(panel);
+  const box = getWorldBox(stackNode);
+  const size = new THREE.Vector3();
+  const center = new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+  return {
+    stackNode,
+    box,
+    size,
+    center,
+    bottomY: box.min.y,
+    topY: box.max.y,
+    height: size.y
+  };
+};
+
+const translateInWorldSpace = (object: THREE.Object3D, deltaWorld: THREE.Vector3): void => {
+  object.updateWorldMatrix(true, false);
+  const newWorldPosition = object.getWorldPosition(new THREE.Vector3()).add(deltaWorld);
+  if (object.parent) {
+    object.parent.updateWorldMatrix(true, false);
+    object.parent.worldToLocal(newWorldPosition);
   }
-  return localBox;
+  object.position.copy(newWorldPosition);
+  object.updateWorldMatrix(true, true);
 };
 
-interface IRackPlacementReferences {
-  box: THREE.Box3;
-  markerUuid: string;
-  rackBottomY: number;
-  rackTopY: number;
-  uHeight: number;
-}
+const stackPanels = (panels: THREE.Object3D[], options: { baseY?: number; gap?: number; targetCenterX?: number; targetCenterZ?: number } = {}): THREE.Box3 => {
+  const { baseY = 0, gap = 0, targetCenterX = 0, targetCenterZ = 0 } = options;
+  const stackedBodyBox = new THREE.Box3();
+  let previousTopY: number | undefined;
 
-const markerYInRack = (marker: THREE.Object3D, rackGroup: THREE.Object3D): number => {
-  rackGroup.updateWorldMatrix(true, true);
-  marker.updateWorldMatrix(true, false);
-  return rackGroup.worldToLocal(marker.getWorldPosition(new THREE.Vector3())).y;
-};
+  panels.forEach((panel, index) => {
+    let metrics = getStackMetrics(panel);
+    const targetBottomY = index === 0 || previousTopY === undefined ? baseY : previousTopY + gap;
 
-const rackInnerBoundsFor = (rackModel: THREE.Object3D, rackGroup: THREE.Object3D, rack: IRack): IRackPlacementReferences => {
-  const marker = rackModel.getObjectByName('RACK_INNER_BOUNDS');
-  if (!marker) throw new Error(`Rack "${rack.Title}" is missing RACK_INNER_BOUNDS.`);
-  const bottomMarker = rackModel.getObjectByName('RACK_U_BOTTOM');
-  const topMarker = rackModel.getObjectByName('RACK_U_TOP');
-  if (!bottomMarker || !topMarker) throw new Error(`Rack "${rack.Title}" is missing RACK_U_BOTTOM or RACK_U_TOP.`);
-  rackGroup.updateWorldMatrix(true, true);
-  const box = boxInLocalSpace(getWorldBox(marker), rackGroup);
-  const rackBottomY = markerYInRack(bottomMarker, rackGroup);
-  const rackTopY = markerYInRack(topMarker, rackGroup);
-  if (rackTopY <= rackBottomY) throw new Error(`Rack "${rack.Title}" has an invalid 42U marker range.`);
-  marker.visible = false;
-  bottomMarker.visible = false;
-  topMarker.visible = false;
-  const uHeight = (rackTopY - rackBottomY) / standardRackUnits;
-  console.log({ rack: rack.Title, markerUuid: marker.uuid, rackInnerMin: box.min.toArray(), rackInnerMax: box.max.toArray(), rackBottomY, rackTopY, uHeight });
-  return { box, markerUuid: marker.uuid, rackBottomY, rackTopY, uHeight };
-};
+    translateInWorldSpace(panel, new THREE.Vector3(
+      targetCenterX - metrics.center.x,
+      targetBottomY - metrics.bottomY,
+      targetCenterZ - metrics.center.z
+    ));
 
-const alignPanelsToUnitGrid = (panels: THREE.Object3D[], deviceModel: THREE.Object3D, uHeight: number, device: IDevice): void => {
-  panels.forEach((panel, unitOffset) => {
-    const anchor = panel.getObjectByName('U_BOTTOM_ANCHOR');
-    if (!anchor) throw new Error(`Device "${device.Title}" is missing U_BOTTOM_ANCHOR.`);
-    deviceModel.updateWorldMatrix(true, true);
-    anchor.updateWorldMatrix(true, false);
-    const anchorInDevice = deviceModel.worldToLocal(anchor.getWorldPosition(new THREE.Vector3()));
-    panel.position.y += unitOffset * uHeight - anchorInDevice.y;
-    panel.updateWorldMatrix(true, true);
-    anchor.visible = false;
+    metrics = getStackMetrics(panel);
+    const actualGap = previousTopY === undefined ? undefined : metrics.bottomY - previousTopY;
+    const fullVisualBox = new THREE.Box3().setFromObject(panel, true);
+    // Debug output deliberately compares body-only stacking with the complete
+    // visual box, so studs/logos can overlap while body edges stay flush.
+    console.log({
+      panel: panel.name,
+      bodyMin: metrics.box.min.toArray(),
+      bodyMax: metrics.box.max.toArray(),
+      bodyHeight: metrics.height,
+      actualBodyGap: actualGap,
+      gapCorrect: actualGap === undefined || Math.abs(actualGap - gap) <= stackEpsilon,
+      fullVisualMin: fullVisualBox.min.toArray(),
+      fullVisualMax: fullVisualBox.max.toArray()
+    });
+    if (metrics.stackNode.name.toUpperCase().startsWith('STACK_BOUNDS')) metrics.stackNode.visible = false;
+    stackedBodyBox.union(metrics.box);
+    previousTopY = metrics.topY;
   });
+
+  return stackedBodyBox;
 };
 
 /** Fit a rack GLB without stretching the authored proportions. */
@@ -268,12 +302,6 @@ const enableModelShadows = (object: THREE.Object3D): void => {
     if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material as THREE.Material];
-    materials.forEach((material) => {
-      material.depthTest = true;
-      material.depthWrite = true;
-      if ((material as THREE.MeshStandardMaterial).opacity === 1) material.transparent = false;
-    });
   });
 };
 
@@ -460,11 +488,13 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
           enableModelShadows(preparedRack);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
-          const innerBounds = rackInnerBoundsFor(rackModel, rackGroup, rack);
-          rackInnerBoundsByKey[rack.RackKey] = innerBounds;
-          (pendingDevicePlacements[rack.RackKey] || []).forEach((placeDevice) => placeDevice(innerBounds));
-          pendingDevicePlacements[rack.RackKey] = [];
-          primitiveRack.visible = false;
+          // Keep the procedural rack in the scene as a permanent safety layer.
+          // On GitHub Pages the GLB files can load slightly later (or with
+          // browser/GPU-specific material quirks), and replacing the primitive
+          // immediately made the preview appear to flash briefly and then go
+          // black. Leaving the primitive visible guarantees the room remains
+          // inspectable even when an authored GLB is too dark or incomplete.
+          primitiveRack.visible = true;
         } catch (error) {
           console.error(error);
           primitiveRack.visible = false;
@@ -484,45 +514,29 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             deviceModel.userData = { type: 'device', deviceKey: device.DeviceKey, rackKey: device.RackKey };
 
             // A panel model represents one rack pitch. Multi-U devices are
-            // assembled from repeated authored panels, then each authored
-            // bottom anchor is aligned to the rack's exact local U grid.
+            // assembled from repeated authored panels. Bounds-based stacking
+            // places each next panel exactly on top of the previous model.
             const panels: THREE.Object3D[] = [];
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
               enableModelShadows(panel);
-              if (device.RackSide === 'Rear') panel.rotation.y = Math.PI;
+              panel.position.y = unitOffset * rackUnitHeight();
               deviceModel.add(panel);
               panels.push(panel);
             }
-            const placeDevice = (innerBounds: IRackPlacementReferences): void => {
-              if (device.UPosition < 1 || device.UPosition + device.UHeight - 1 > standardRackUnits) {
-                throw new Error(`Device "${device.Title}" has invalid U range ${device.UPosition}-${device.UPosition + device.UHeight - 1}.`);
-              }
-              alignPanelsToUnitGrid(panels, deviceModel, innerBounds.uHeight, device);
-              const x = xForSlotInRackBounds(device.MountWidth, device.HorizontalSlot, innerBounds.box);
-              const z = zForSide(device, false);
-              const targetBottomY = innerBounds.rackBottomY + (device.UPosition - 1) * innerBounds.uHeight;
-              const deviceTopY = targetBottomY + device.UHeight * innerBounds.uHeight;
-              deviceModel.position.set(x, targetBottomY, z);
-              rackGroup.add(deviceModel);
-              deviceObjectsRef.current[device.DeviceKey] = deviceModel;
-              primitiveDevice.visible = false;
-              console.log({
-                rack: rack.Title,
-                device: device.Title,
-                startU: device.UPosition,
-                units: device.UHeight,
-                targetBottomY,
-                deviceTopY,
-                localX: x,
-                localY: targetBottomY,
-                localZ: z,
-                row: device.RackSide.toLowerCase()
-              });
-            };
-            const innerBounds = rackInnerBoundsByKey[rack.RackKey];
-            if (innerBounds) placeDevice(innerBounds);
-            else (pendingDevicePlacements[rack.RackKey] || (pendingDevicePlacements[rack.RackKey] = [])).push(placeDevice);
+            const stackedBounds = stackPanels(panels, { baseY: 0, gap: 0, targetCenterX: 0, targetCenterZ: 0 });
+            const stackedCenter = stackedBounds.getCenter(new THREE.Vector3());
+            deviceModel.position.set(
+              xForSlot(device.MountWidth, device.HorizontalSlot),
+              yForDevice(rack, device) - stackedCenter.y,
+              zForSide(device, selected)
+            );
+            rackGroup.add(deviceModel);
+            deviceObjectsRef.current[device.DeviceKey] = deviceModel;
+            // Keep the color-coded primitive device visible so the rack
+            // inventory never disappears if a GLB panel renders black or
+            // fails after an initial successful request on static hosting.
+            primitiveDevice.visible = true;
           } catch (error) {
             console.error(error);
             primitiveDevice.visible = true;
@@ -577,6 +591,29 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     onResize();
 
     let frameId = 0;
+    let renderedFrames = 0;
+    const reportBlackFrameIfNeeded = (): void => {
+      renderedFrames += 1;
+      if (renderedFrames !== 45) return;
+      try {
+        const context = renderer.getContext();
+        const width = context.drawingBufferWidth;
+        const height = context.drawingBufferHeight;
+        if (width < 3 || height < 3) return;
+        const pixels = new Uint8Array(3 * 3 * 4);
+        context.readPixels(Math.floor(width / 2) - 1, Math.floor(height / 2) - 1, 3, 3, context.RGBA, context.UNSIGNED_BYTE, pixels);
+        let luminance = 0;
+        for (let index = 0; index < pixels.length; index += 4) luminance += pixels[index] + pixels[index + 1] + pixels[index + 2];
+        if (luminance / (pixels.length / 4) < 9) onSceneUnavailable('The 3D canvas rendered black in this browser, so the rack elevation fallback is shown.');
+      } catch (error) {
+        onSceneUnavailable('3D rendering could not be verified, so the rack elevation fallback is shown.');
+      }
+    };
+    const onContextLost = (event: Event): void => {
+      event.preventDefault();
+      onSceneUnavailable('3D rendering lost its WebGL context, so the rack elevation fallback is shown.');
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
     const animate = (): void => {
       if (focusActiveRef.current) {
         camera.position.lerp(cameraTargetRef.current, 0.055);
@@ -586,6 +623,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       try {
         controls.update();
         renderer.render(scene, camera);
+        reportBlackFrameIfNeeded();
         frameId = window.requestAnimationFrame(animate);
       } catch (error) {
         focusActiveRef.current = false;
@@ -600,6 +638,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
