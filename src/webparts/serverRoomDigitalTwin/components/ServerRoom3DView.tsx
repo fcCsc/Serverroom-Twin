@@ -102,6 +102,13 @@ const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
   return -rackInteriorWidth / 2 + segment / 2 + (slot - 1) * segment;
 };
 
+const xForSlotInRackBounds = (mountWidth: MountWidth, horizontalSlot: number, rackInnerBounds: THREE.Box3): number => {
+  const slots = slotCountByMountWidth[mountWidth];
+  const slot = Math.max(1, Math.min(horizontalSlot, slots));
+  const segment = (rackInnerBounds.max.x - rackInnerBounds.min.x) / slots;
+  return rackInnerBounds.min.x + segment / 2 + (slot - 1) * segment;
+};
+
 const yForDevice = (rack: IRack, device: IDevice): number => {
   const { mountTopY, unitHeight } = mountAreaFor(rack);
   const highestValidStart = Math.max(1, rack.RackHeightU - device.UHeight + 1);
@@ -131,6 +138,22 @@ const zForSide = (device: IDevice, selected: boolean): number => {
 const sideCameraZ = (rackZPosition: number, rackSide: 'Front' | 'Rear'): number => rackZPosition + (rackSide === 'Rear' ? 4.4 : -4.4);
 
 const activeRackSide = (devices: IDevice[]): 'Front' | 'Rear' => devices.some((device) => device.RackSide === 'Rear') && !devices.some((device) => device.RackSide === 'Front') ? 'Rear' : 'Front';
+
+const validateDeviceURanges = (devices: IDevice[]): void => {
+  const occupied: { [rackAndRow: string]: { [unit: number]: string | undefined } | undefined } = {};
+  devices.forEach((device) => {
+    const lastU = device.UPosition + device.UHeight - 1;
+    if (device.UPosition < 1 || device.UHeight < 1 || lastU > standardRackUnits) {
+      throw new Error(`Device "${device.Title}" has invalid U range ${device.UPosition}-${lastU}.`);
+    }
+    const rackAndRow = `${device.RackKey}:${device.RackSide}`;
+    const row = occupied[rackAndRow] || (occupied[rackAndRow] = {});
+    for (let unit = device.UPosition; unit <= lastU; unit++) {
+      if (row[unit]) throw new Error(`Devices "${row[unit]}" and "${device.Title}" overlap at U${unit} in ${rackAndRow}.`);
+      row[unit] = device.Title;
+    }
+  });
+};
 
 
 const centerObject = (object: THREE.Object3D): void => {
@@ -395,6 +418,16 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
         if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
       };
     }
+    try {
+      validateDeviceURanges(devices);
+    } catch (error) {
+      onSceneUnavailable(error instanceof Error ? error.message : 'Rack device U metadata is invalid.');
+      return () => {
+        disposed = true;
+        renderer.dispose();
+        if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
+      };
+    }
 
     const minX = Math.min(...racks.map((rack) => rack.XPosition));
     const maxX = Math.max(...racks.map((rack) => rack.XPosition));
@@ -435,6 +468,8 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     scene.add(roomGroup);
     rackObjectsRef.current = {};
     deviceObjectsRef.current = {};
+    const rackInnerBoundsByKey: { [rackKey: string]: IRackPlacementReferences | undefined } = {};
+    const pendingDevicePlacements: { [rackKey: string]: Array<(bounds: IRackPlacementReferences) => void> | undefined } = {};
 
     racks.forEach((rack) => {
       const rackSelected = selectedRackKey === rack.RackKey && !selectedDeviceKey;
@@ -461,7 +496,9 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
           // inspectable even when an authored GLB is too dark or incomplete.
           primitiveRack.visible = true;
         } catch (error) {
-          primitiveRack.visible = true;
+          console.error(error);
+          primitiveRack.visible = false;
+          onSceneUnavailable(error instanceof Error ? error.message : `Rack "${rack.Title}" could not provide its interior bounds.`);
         }
       });
 
@@ -501,6 +538,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             // fails after an initial successful request on static hosting.
             primitiveDevice.visible = true;
           } catch (error) {
+            console.error(error);
             primitiveDevice.visible = true;
           }
         });
