@@ -81,6 +81,20 @@ const widthForMount = (mountWidth: MountWidth): number => rackInteriorWidth / sl
 const rackHeightFor = (rack: IRack): number => standardRackHeight * Math.max(1, rack.RackHeightU) / standardRackUnits;
 const rackUnitHeight = (): number => nativeRackUnitHeight;
 
+interface IRackMountArea {
+  mountBottomY: number;
+  mountTopY: number;
+  unitHeight: number;
+}
+
+/** Rack-local 42U rail coordinates; cabinet roof geometry is not a slot reference. */
+const mountAreaFor = (rack: IRack): IRackMountArea => {
+  const rackUnits = Math.max(1, rack.RackHeightU);
+  const unitHeight = rackUnitHeight();
+  const mountBottomY = -rackHeightFor(rack) / 2;
+  return { mountBottomY, mountTopY: mountBottomY + rackUnits * unitHeight, unitHeight };
+};
+
 const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
   const slots = slotCountByMountWidth[mountWidth];
   const slot = Math.max(1, Math.min(horizontalSlot, slots));
@@ -89,9 +103,21 @@ const xForSlot = (mountWidth: MountWidth, horizontalSlot: number): number => {
 };
 
 const yForDevice = (rack: IRack, device: IDevice): number => {
-  const unitHeight = rackUnitHeight();
-  const centerU = device.UPosition + device.UHeight / 2 - 1;
-  return -rackHeightFor(rack) / 2 + centerU * unitHeight;
+  const { mountTopY, unitHeight } = mountAreaFor(rack);
+  const highestValidStart = Math.max(1, rack.RackHeightU - device.UHeight + 1);
+  const normalizedUPosition = THREE.MathUtils.clamp(device.UPosition, 1, highestValidStart);
+  const slotIndexFromTop = rack.RackHeightU - normalizedUPosition - device.UHeight + 1;
+
+  if (normalizedUPosition !== device.UPosition) {
+    console.warn('Device U position is outside the rack mount area; using the nearest valid slot.', {
+      rack: rack.Title,
+      device: device.Title,
+      requestedUPosition: device.UPosition,
+      normalizedUPosition
+    });
+  }
+
+  return mountTopY - (slotIndexFromTop + device.UHeight / 2) * unitHeight;
 };
 
 const heightForDevice = (device: IDevice): number => Math.max(rackUnitHeight() * device.UHeight * panelVerticalFillFactor, 0.045);
