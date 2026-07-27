@@ -245,48 +245,6 @@ const stackPanels = (panels: THREE.Object3D[], options: { baseY?: number; gap?: 
   return stackedBodyBox;
 };
 
-const fitStackToRackInterior = (rack: IRack, device: IDevice, stackedBodyBox: THREE.Box3, desiredY: number): number => {
-  const { mountBottomY: rackInnerBottomY, mountTopY: rackInnerTopY, unitHeight } = mountAreaFor(rack);
-  const usableRackHeight = rackInnerTopY - rackInnerBottomY;
-  const totalStackHeight = stackedBodyBox.max.y - stackedBodyBox.min.y;
-
-  if (totalStackHeight > usableRackHeight + stackEpsilon) {
-    console.warn('Stack does not fit into rack interior height.', {
-      device: device.Title,
-      rack: rack.Title,
-      usableRackHeight,
-      totalStackHeight,
-      overflow: totalStackHeight - usableRackHeight
-    });
-    return desiredY;
-  }
-
-  let fittedY = desiredY;
-  const topOverflow = stackedBodyBox.max.y + fittedY - rackInnerTopY;
-  if (topOverflow > stackEpsilon) fittedY -= topOverflow;
-
-  const bottomOverflow = rackInnerBottomY - (stackedBodyBox.min.y + fittedY);
-  if (bottomOverflow > stackEpsilon) fittedY += bottomOverflow;
-
-  const panelTopY = stackedBodyBox.max.y + fittedY;
-  console.assert(panelTopY <= rackInnerTopY + stackEpsilon, 'Panel intersects the rack top frame.', {
-    rack: rack.Title,
-    device: device.Title,
-    rackLocalOrigin: [0, 0, 0],
-    rackScale: [1, 1, 1],
-    mountTopY: rackInnerTopY,
-    mountBottomY: rackInnerBottomY,
-    topFrameBottomY: rackInnerTopY,
-    panelCenterY: fittedY + (stackedBodyBox.min.y + stackedBodyBox.max.y) / 2,
-    panelTopY,
-    panelBottomY: stackedBodyBox.min.y + fittedY,
-    mountHeightCorrect: Math.abs(usableRackHeight - rack.RackHeightU * unitHeight) <= stackEpsilon,
-    coordinateSpace: 'rack-local'
-  });
-
-  return fittedY;
-};
-
 /** Fit a rack GLB without stretching the authored proportions. */
 const prepareRackModel = (object: THREE.Object3D, rack: IRack): THREE.Object3D => {
   // Face the cabinet openings towards the front/rear device planes.
@@ -321,12 +279,6 @@ const enableModelShadows = (object: THREE.Object3D): void => {
     if (!mesh.isMesh) return;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material as THREE.Material];
-    materials.forEach((material) => {
-      material.depthTest = true;
-      material.depthWrite = true;
-      if ((material as THREE.MeshStandardMaterial).opacity === 1) material.transparent = false;
-    });
   });
 };
 
@@ -501,7 +453,13 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
           enableModelShadows(preparedRack);
           const rackModel = createModelWrapper(preparedRack, { type: 'rack', rackKey: rack.RackKey });
           rackGroup.add(rackModel);
-          primitiveRack.visible = false;
+          // Keep the procedural rack in the scene as a permanent safety layer.
+          // On GitHub Pages the GLB files can load slightly later (or with
+          // browser/GPU-specific material quirks), and replacing the primitive
+          // immediately made the preview appear to flash briefly and then go
+          // black. Leaving the primitive visible guarantees the room remains
+          // inspectable even when an authored GLB is too dark or incomplete.
+          primitiveRack.visible = true;
         } catch (error) {
           primitiveRack.visible = true;
         }
@@ -525,21 +483,23 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
             for (let unitOffset = 0; unitOffset < device.UHeight; unitOffset++) {
               const panel = unitOffset === 0 ? preparedPanel : cloneObject(preparedPanel);
               enableModelShadows(panel);
-              if (device.RackSide === 'Rear') panel.rotation.y = Math.PI;
+              panel.position.y = unitOffset * rackUnitHeight();
               deviceModel.add(panel);
               panels.push(panel);
             }
             const stackedBounds = stackPanels(panels, { baseY: 0, gap: 0, targetCenterX: 0, targetCenterZ: 0 });
             const stackedCenter = stackedBounds.getCenter(new THREE.Vector3());
-            const desiredY = yForDevice(rack, device) - stackedCenter.y;
             deviceModel.position.set(
               xForSlot(device.MountWidth, device.HorizontalSlot),
-              fitStackToRackInterior(rack, device, stackedBounds, desiredY),
+              yForDevice(rack, device) - stackedCenter.y,
               zForSide(device, selected)
             );
             rackGroup.add(deviceModel);
             deviceObjectsRef.current[device.DeviceKey] = deviceModel;
-            primitiveDevice.visible = false;
+            // Keep the color-coded primitive device visible so the rack
+            // inventory never disappears if a GLB panel renders black or
+            // fails after an initial successful request on static hosting.
+            primitiveDevice.visible = true;
           } catch (error) {
             primitiveDevice.visible = true;
           }
@@ -593,6 +553,29 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
     onResize();
 
     let frameId = 0;
+    let renderedFrames = 0;
+    const reportBlackFrameIfNeeded = (): void => {
+      renderedFrames += 1;
+      if (renderedFrames !== 45) return;
+      try {
+        const context = renderer.getContext();
+        const width = context.drawingBufferWidth;
+        const height = context.drawingBufferHeight;
+        if (width < 3 || height < 3) return;
+        const pixels = new Uint8Array(3 * 3 * 4);
+        context.readPixels(Math.floor(width / 2) - 1, Math.floor(height / 2) - 1, 3, 3, context.RGBA, context.UNSIGNED_BYTE, pixels);
+        let luminance = 0;
+        for (let index = 0; index < pixels.length; index += 4) luminance += pixels[index] + pixels[index + 1] + pixels[index + 2];
+        if (luminance / (pixels.length / 4) < 9) onSceneUnavailable('The 3D canvas rendered black in this browser, so the rack elevation fallback is shown.');
+      } catch (error) {
+        onSceneUnavailable('3D rendering could not be verified, so the rack elevation fallback is shown.');
+      }
+    };
+    const onContextLost = (event: Event): void => {
+      event.preventDefault();
+      onSceneUnavailable('3D rendering lost its WebGL context, so the rack elevation fallback is shown.');
+    };
+    renderer.domElement.addEventListener('webglcontextlost', onContextLost);
     const animate = (): void => {
       if (focusActiveRef.current) {
         camera.position.lerp(cameraTargetRef.current, 0.055);
@@ -602,6 +585,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       try {
         controls.update();
         renderer.render(scene, camera);
+        reportBlackFrameIfNeeded();
         frameId = window.requestAnimationFrame(animate);
       } catch (error) {
         focusActiveRef.current = false;
@@ -616,6 +600,7 @@ const ServerRoom3DView: React.FC<IServerRoom3DViewProps> = ({ racks, devices, mo
       window.removeEventListener('resize', onResize);
       renderer.domElement.removeEventListener('pointerdown', onPointerDown);
       renderer.domElement.removeEventListener('pointerup', onPointerUp);
+      renderer.domElement.removeEventListener('webglcontextlost', onContextLost);
       controls.dispose();
       renderer.dispose();
       if (renderer.domElement.parentElement === host) host.removeChild(renderer.domElement);
